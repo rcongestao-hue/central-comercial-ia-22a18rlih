@@ -19,6 +19,7 @@ import ManagementDashboard from './pages/ManagementDashboard'
 import ReportsPage from './pages/Reports'
 import IntegrationsPage from './pages/Integrations'
 import SettingsPage from './pages/Settings'
+import TeamHierarchy from './pages/TeamHierarchy'
 import NotFound from './pages/NotFound'
 
 // Protected Route Component
@@ -53,6 +54,7 @@ const App = () => (
             <Route path="/oportunidades" element={<PipelinePage />} />
             <Route path="/agenda" element={<AgendaPage />} />
             <Route path="/gestao" element={<ManagementDashboard />} />
+            <Route path="/equipe" element={<TeamHierarchy />} />
             <Route path="/relatorios" element={<ReportsPage />} />
             <Route path="/integrações" element={<IntegrationsPage />} />
             <Route path="/configuracoes" element={<SettingsPage />} />

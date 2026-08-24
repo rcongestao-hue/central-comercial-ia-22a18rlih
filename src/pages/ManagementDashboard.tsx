@@ -26,7 +26,7 @@ import {
 } from 'lucide-react'
 
 export default function ManagementDashboard() {
-  const { currentCompany, userList, companyData } = useAuth()
+  const { currentCompany, userList, companyUsersList, companyData } = useAuth()
 
   const [selectedExecId, setSelectedExecId] = useState<string>('all')
   const [selectedPeriod, setSelectedPeriod] = useState<'semana' | 'mes' | 'trimestre'>('mes')
@@ -71,7 +71,7 @@ export default function ManagementDashboard() {
     const execPipeline = execOpps
       .filter((o) => o.etapa !== 'ganha' && o.etapa !== 'perdida')
       .reduce((acc, o) => acc + (o.valorEstimado || 0), 0)
-    const execMeetings = meetings.filter((m) => m.participantes.some((p) => p.includes(exec.nome)))
+    const execMeetings = meetings.filter((m) => (m.participants || (m as any).participantes || []).some((p: string) => p.includes(exec.nome)))
 
     return {
       exec,
@@ -185,7 +185,7 @@ export default function ManagementDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-black text-slate-900">
-              {meetings.filter((m) => m.status === 'concluida').length}
+              {meetings.filter((m) => m.status === 'realizada').length}
             </div>
             <p className="text-xs text-slate-500 mt-1">Demonstrações e diagnósticos com atas</p>
           </CardContent>

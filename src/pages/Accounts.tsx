@@ -237,85 +237,86 @@ export default function AccountsPage() {
 
     const calculatedEndereco = buildFullAddress()
 
-    const newAccId = `acc_${Date.now()}`
-    const newAccount: CommercialAccount = {
-      id: newAccId,
+    // Temporary object for AI evaluation
+    const tempAccount: CommercialAccount = {
+      id: '',
+      company: currentCompany.id,
       empresaId: currentCompany.id,
       razaoSocial: razaoSocial.trim(),
       nomeFantasia: (nomeFantasia || razaoSocial).trim(),
-      cnpj: cnpj ? formatCnpj(cnpj) : undefined,
-      site: site.trim() || undefined,
       segmento: segmento.trim() || 'B2B Geral',
       localizacao: calculatedLocalizacao,
-      endereco: calculatedEndereco || undefined,
-      logradouro: logradouro.trim() || undefined,
-      numero: numero.trim() || undefined,
-      complemento: complemento.trim() || undefined,
-      bairro: bairro.trim() || undefined,
-      cidade: cidade.trim() || undefined,
-      estado: estado.trim() || undefined,
-      cep: cep.trim() || undefined,
-      cnaePrincipal: cnaePrincipal.trim() || undefined,
-      telefone: telefone.trim() || undefined,
-      email: email.trim() || undefined,
-      situacaoCadastral: situacaoCadastral || undefined,
-      linkedinInstitucional: linkedin.trim() || undefined,
-      responsavelComercialId: currentUser?.id || 'usr_exec_1',
-      etapaAtual: 'conta_identificada',
       porte,
-      observacoes: observacoes.trim() || undefined,
-      proximoPasso: proximoPasso.trim() || 'Realizar qualificação inicial e identificar decisores',
-      criadoEm: new Date().toISOString(),
-      atualizadoEm: new Date().toISOString(),
     }
+    const iaQual = commercialAiService.qualifyAccount(tempAccount, currentCompany)
 
-    // Auto generate IA analysis for the new account
-    const iaQual = commercialAiService.qualifyAccount(newAccount, currentCompany)
-    newAccount.iaAnalysis = {
-      ...iaQual,
-      geradoEm: new Date().toISOString(),
-    }
+    import('@/services/crm-service').then(async ({ crmService }) => {
+      try {
+        const createdAcc = await crmService.createAccount({
+          company: currentCompany.id,
+          razao_social: razaoSocial.trim(),
+          nome_fantasia: (nomeFantasia || razaoSocial).trim(),
+          cnpj: cnpj ? formatCnpj(cnpj) : undefined,
+          site: site.trim() || undefined,
+          segmento: segmento.trim() || 'B2B Geral',
+          localizacao: calculatedLocalizacao,
+          endereco: calculatedEndereco || undefined,
+          logradouro: logradouro.trim() || undefined,
+          numero: numero.trim() || undefined,
+          complemento: complemento.trim() || undefined,
+          bairro: bairro.trim() || undefined,
+          cidade: cidade.trim() || undefined,
+          estado: estado.trim() || undefined,
+          cep: cep.trim() || undefined,
+          cnaePrincipal: cnaePrincipal.trim() || undefined,
+          telefone: telefone.trim() || undefined,
+          email: email.trim() || undefined,
+          situacaoCadastral: situacaoCadastral || undefined,
+          linkedin: linkedin.trim() || undefined,
+          porte,
+          observacoes: observacoes.trim() || undefined,
+          proximo_passo:
+            proximoPasso.trim() || 'Realizar qualificação inicial e identificar decisores',
+          icp_score: iaQual.scoreIcp,
+          icp_classification: iaQual.aderenciaIcp,
+          ai_summary: iaQual.resumoExecutivo,
+          ai_hypotheses: iaQual.hipoteses,
+          ai_pending_points: iaQual.dadosNaoConfirmados,
+          identification_status: 'confirmada',
+        })
 
-    updateCompanyData((prev) => ({
-      ...prev,
-      accounts: [newAccount, ...prev.accounts],
-      timeline: [
-        {
-          id: `tl_${Date.now()}`,
-          empresaId: currentCompany.id,
-          contaId: newAccId,
-          tipo: 'conta_criada',
-          titulo: 'Conta Comercial Cadastrada',
-          descricao: `${newAccount.razaoSocial} foi adicionada à carteira de prospecção${
-            newAccount.cnpj ? ` (CNPJ: ${newAccount.cnpj})` : ''
-          }.`,
-          origem: 'usuario',
-          criadoPorUsuarioId: currentUser?.id,
-          criadoPorNome: currentUser?.nome,
-          criadoEm: new Date().toISOString(),
-        },
-        {
-          id: `tl_ia_${Date.now()}`,
-          empresaId: currentCompany.id,
-          contaId: newAccId,
-          tipo: 'analise_ia_produzida',
-          titulo: 'Análise de ICP e Diagnóstico Gerados por IA',
-          descricao: `Aderência ao ICP avaliada em ${iaQual.scoreIcp}% (${iaQual.aderenciaIcp}).`,
-          origem: 'ia',
-          criadoEm: new Date().toISOString(),
-        },
-        ...prev.timeline,
-      ],
-    }))
+        // Also record activity in PB
+        await crmService.createActivity({
+          company: currentCompany.id,
+          account: createdAcc.id,
+          type: 'conta_criada',
+          origin: 'usuario',
+          description: `${createdAcc.razaoSocial} foi adicionada à carteira de prospecção.`,
+        })
 
-    toast({
-      title: 'Conta comercial cadastrada!',
-      description: 'A IA já realizou o diagnóstico de qualificação e gerou perguntas de abordagem.',
+        updateCompanyData((prev) => ({
+          ...prev,
+          accounts: [createdAcc, ...prev.accounts],
+        }))
+
+        toast({
+          title: 'Conta comercial cadastrada!',
+          description:
+            'A IA já realizou o diagnóstico de qualificação e gerou perguntas de abordagem.',
+        })
+
+        setDialogOpen(false)
+        resetForm()
+        navigate(`/contas/${createdAcc.id}`)
+      } catch (err: any) {
+        console.error('Error creating account:', err)
+        toast({
+          title: 'Erro ao criar conta',
+          description: err?.message || 'Falha ao salvar conta comercial.',
+          variant: 'destructive',
+        })
+      }
     })
-
-    setDialogOpen(false)
-    resetForm()
-    navigate(`/contas/${newAccId}`)
   }
 
   const resetForm = () => {

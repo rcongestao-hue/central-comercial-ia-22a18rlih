@@ -78,43 +78,40 @@ export default function PipelinePage() {
     e.preventDefault()
     if (!titulo || !contaId || !currentCompany) return
 
-    const newOpp: Opportunity = {
-      id: `opp_${Date.now()}`,
-      empresaId: currentCompany.id,
-      contaId,
-      titulo,
-      responsavelId: currentUser?.id || 'usr_exec_1',
-      etapa,
-      valorEstimado: parseFloat(valor) || 0,
-      prazoEstimado: prazo || undefined,
-      proximaAcao: proximaAcao || 'Avançar qualificação',
-      criadoEm: new Date().toISOString(),
-      atualizadoEm: new Date().toISOString(),
-    }
+    import('@/services/crm-service').then(async ({ crmService }) => {
+      try {
+        const createdOpp = await crmService.createOpportunity({
+          company: currentCompany.id,
+          account: contaId,
+          proximo_passo: titulo,
+          etapa,
+          valor_estimado: parseFloat(valor) || 0,
+          prazo: prazo || undefined,
+        })
 
-    updateCompanyData((prev) => ({
-      ...prev,
-      opportunities: [newOpp, ...prev.opportunities],
-      timeline: [
-        {
-          id: `tl_${Date.now()}`,
-          empresaId: currentCompany.id,
-          contaId,
-          tipo: 'oportunidade_atualizada',
-          titulo: `Nova Oportunidade: ${newOpp.titulo}`,
-          descricao: `Cadastrada no valor de ${formatBRL(newOpp.valorEstimado)} por ${currentUser?.nome}.`,
-          origem: 'usuario',
-          criadoPorUsuarioId: currentUser?.id,
-          criadoPorNome: currentUser?.nome,
-          criadoEm: new Date().toISOString(),
-        },
-        ...prev.timeline,
-      ],
-    }))
+        await crmService.createActivity({
+          company: currentCompany.id,
+          account: contaId,
+          type: 'oportunidade_atualizada',
+          description: `Nova Oportunidade: ${titulo} (${formatBRL(parseFloat(valor) || 0)})`,
+        })
 
-    toast({ title: 'Oportunidade adicionada ao pipeline!' })
-    setDialogOpen(false)
-    resetForm()
+        updateCompanyData((prev) => ({
+          ...prev,
+          opportunities: [createdOpp, ...prev.opportunities],
+        }))
+
+        toast({ title: 'Oportunidade adicionada ao pipeline!' })
+        setDialogOpen(false)
+        resetForm()
+      } catch (err: any) {
+        toast({
+          title: 'Erro ao criar oportunidade',
+          description: err?.message,
+          variant: 'destructive',
+        })
+      }
+    })
   }
 
   const handleMoveStage = (oppId: string, newStage: PipelineStage) => {
@@ -122,29 +119,28 @@ export default function PipelinePage() {
     const targetOpp = opportunities.find((o) => o.id === oppId)
     if (!targetOpp) return
 
-    updateCompanyData((prev) => ({
-      ...prev,
-      opportunities: prev.opportunities.map((o) =>
-        o.id === oppId ? { ...o, etapa: newStage, atualizadoEm: new Date().toISOString() } : o,
-      ),
-      timeline: [
-        {
-          id: `tl_${Date.now()}`,
-          empresaId: currentCompany.id,
-          contaId: targetOpp.contaId,
-          tipo: 'oportunidade_atualizada',
-          titulo: `Oportunidade Movida: ${targetOpp.titulo}`,
-          descricao: `Etapa alterada para ${PIPELINE_STAGES.find((s) => s.id === newStage)?.label}.`,
-          origem: 'usuario',
-          criadoPorUsuarioId: currentUser?.id,
-          criadoPorNome: currentUser?.nome,
-          criadoEm: new Date().toISOString(),
-        },
-        ...prev.timeline,
-      ],
-    }))
+    import('@/services/crm-service').then(async ({ crmService }) => {
+      try {
+        await crmService.updateOpportunity(oppId, { etapa: newStage })
+        await crmService.createActivity({
+          company: currentCompany.id,
+          account: targetOpp.account || targetOpp.contaId,
+          type: 'oportunidade_atualizada',
+          description: `Oportunidade movida para ${PIPELINE_STAGES.find((s) => s.id === newStage)?.label}`,
+        })
 
-    toast({ title: 'Etapa do pipeline atualizada' })
+        updateCompanyData((prev) => ({
+          ...prev,
+          opportunities: prev.opportunities.map((o) =>
+            o.id === oppId ? { ...o, etapa: newStage } : o,
+          ),
+        }))
+
+        toast({ title: 'Etapa do pipeline atualizada' })
+      } catch (err: any) {
+        toast({ title: 'Erro ao mover etapa', description: err?.message, variant: 'destructive' })
+      }
+    })
   }
 
   const resetForm = () => {

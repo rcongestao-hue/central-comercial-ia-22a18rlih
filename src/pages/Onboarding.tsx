@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
+import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -24,9 +25,9 @@ import {
 } from 'lucide-react'
 
 export default function Onboarding() {
-  const { registerCompanyAndAdmin, isAuthenticated } = useAuth()
+  const { registerCompanyAndAdmin } = useAuth()
   const navigate = useNavigate()
-
+  const { toast } = useToast()
   const [step, setStep] = useState<1 | 2>(1)
 
   // Step 1: Admin User Data
@@ -58,35 +59,32 @@ export default function Onboarding() {
     setStep(2)
   }
 
-  const handleFinish = (e: React.FormEvent) => {
+  const handleFinish = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!companyNome) return
+    if (!companyNome.trim()) return
 
     setLoading(true)
-
     const segArray = segmentosPrioritarios
       ? segmentosPrioritarios
           .split(',')
           .map((s) => s.trim())
           .filter(Boolean)
-      : ['Tecnologia B2B', 'Serviços Corporativos']
-
+      : ['B2B Geral']
     const prodArray = produtosServicos
       ? produtosServicos
           .split(',')
-          .map((p) => p.trim())
+          .map((s) => s.trim())
           .filter(Boolean)
-      : ['Soluções Comerciais Especializadas']
-
+      : ['Consultoria & Serviços']
     const diffArray = principaisDiferenciais
       ? principaisDiferenciais
           .split(',')
-          .map((d) => d.trim())
+          .map((s) => s.trim())
           .filter(Boolean)
-      : ['Atendimento consultivo ágil', 'Foco em ROI']
+      : ['Atendimento Ágil']
 
-    setTimeout(() => {
-      registerCompanyAndAdmin(
+    try {
+      const res = await registerCompanyAndAdmin(
         {
           nome: companyNome,
           nomeFantasia: companyFantasia || companyNome,
@@ -101,15 +99,32 @@ export default function Onboarding() {
           nome: adminNome,
           email: adminEmail,
           cargo: adminCargo,
-          senha: adminSenha,
-          role: 'admin',
+          senha: adminSenha || 'admin123',
         },
       )
       setLoading(false)
-      navigate('/')
-    }, 400)
+      if (res.success) {
+        toast({
+          title: 'Empresa cadastrada!',
+          description: 'Seja bem-vindo(a) à Central Comercial IA.',
+        })
+        navigate('/inicio')
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Erro ao cadastrar',
+          description: res.error || 'Não foi possível salvar no banco de dados.',
+        })
+      }
+    } catch (err: any) {
+      setLoading(false)
+      toast({
+        variant: 'destructive',
+        title: 'Erro',
+        description: err.message,
+      })
+    }
   }
-
   return (
     <div className="min-h-screen bg-[#0E1B2F] flex items-center justify-center p-4 sm:p-6 lg:p-8">
       <div className="max-w-3xl w-full">

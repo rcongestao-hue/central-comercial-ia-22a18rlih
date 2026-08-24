@@ -9,6 +9,8 @@ import {
   KanbanSquare,
   Calendar,
   Briefcase,
+  LayoutDashboard,
+  Network,
   BarChart3,
   Plug,
   Settings,
@@ -103,15 +105,24 @@ export default function AppShell() {
     { label: 'Prospecção Assistida', path: '/prospeccao', icon: Send, badge: 'IA' },
     { label: 'Oportunidades', path: '/oportunidades', icon: KanbanSquare },
     { label: 'Agenda Comercial', path: '/agenda', icon: Calendar },
-    { label: 'Gestão & Equipe', path: '/gestao', icon: Briefcase },
-    { label: 'Relatórios', path: '/relatorios', icon: BarChart3 },
-    { label: 'Integrações', path: '/integrações', icon: Plug },
+    { label: 'Painel do Gestor', path: '/gestao', icon: LayoutDashboard },
+    { label: 'Equipe & Permissões', path: '/equipe', icon: Users },
+    { label: 'Relatórios & Metas', path: '/relatorios', icon: BarChart3 },
+    { label: 'Integrações', path: '/integrações', icon: Network },
     { label: 'Configurações', path: '/configuracoes', icon: Settings },
   ]
-
   const roleBadges: Record<string, { label: string; color: string }> = {
-    admin: { label: 'Administrador', color: 'bg-indigo-100 text-indigo-800 border-indigo-200' },
-    gestor: { label: 'Gestor Comercial', color: 'bg-blue-100 text-blue-800 border-blue-200' },
+    proprietario: { label: 'Proprietário', color: 'bg-amber-100 text-amber-900 border-amber-300' },
+    administrador: {
+      label: 'Administrador',
+      color: 'bg-purple-100 text-purple-900 border-purple-200',
+    },
+    admin: { label: 'Administrador', color: 'bg-purple-100 text-purple-900 border-purple-200' },
+    diretor_comercial: {
+      label: 'Diretor Comercial',
+      color: 'bg-blue-100 text-blue-900 border-blue-200',
+    },
+    gestor: { label: 'Gestor Comercial', color: 'bg-indigo-100 text-indigo-800 border-indigo-200' },
     executivo: { label: 'Executivo', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
     visualizador: { label: 'Visualizador', color: 'bg-slate-100 text-slate-800 border-slate-200' },
   }
@@ -221,7 +232,7 @@ export default function AppShell() {
               className="w-64 bg-slate-900 border-slate-800 text-slate-200"
             >
               <DropdownMenuLabel className="text-xs text-slate-400 font-normal">
-                Ambientes Multiempresa (Isolamento localStorage)
+                Ambientes Multiempresa & Permissões
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-slate-800" />
               {allCompanies.map((c) => (
@@ -486,7 +497,7 @@ export default function AppShell() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2 max-w-[1440px] mx-auto">
             <span>© 2025 Central Comercial IA — Plataforma SaaS B2B Assistida por IA</span>
             <span className="text-[11px] text-slate-400">
-              Dados persistidos com isolamento multiempresa local (localStorage). Sem dados
+              Dados persistidos com isolamento multi-tenant seguro e banco de dados real. Sem dados
               expostos.
             </span>
           </div>

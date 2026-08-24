@@ -79,47 +79,47 @@ export default function ContactsPage() {
     e.preventDefault()
     if (!nome || !contaId || !currentCompany) return
 
-    const newContact: Contact = {
-      id: `ct_${Date.now()}`,
-      empresaId: currentCompany.id,
-      contaId,
-      nome,
-      cargo,
-      area: area || 'Geral',
-      email,
-      telefone,
-      linkedin: linkedin || undefined,
-      classificacao,
-      origemRelacionamento: origem,
-      relacaoComExecutivo: relacao,
-      observacoes: obs,
-      criadoEm: new Date().toISOString(),
-    }
+    import('@/services/crm-service').then(async ({ crmService }) => {
+      try {
+        const createdContact = await crmService.createContact({
+          company: currentCompany.id,
+          account: contaId,
+          name: nome,
+          cargo,
+          area: area || 'Geral',
+          email,
+          telefone,
+          linkedin: linkedin || undefined,
+          classificacao,
+          origem_relacionamento: origem,
+          relacao_executivo: relacao,
+          observacoes: obs,
+        })
 
-    updateCompanyData((prev) => ({
-      ...prev,
-      contacts: [newContact, ...prev.contacts],
-      timeline: [
-        {
-          id: `tl_${Date.now()}`,
-          empresaId: currentCompany.id,
-          contaId,
-          contatoId: newContact.id,
-          tipo: 'contato_adicionado',
-          titulo: `Contato Adicionado: ${newContact.nome}`,
-          descricao: `${newContact.cargo} (${newContact.classificacao.toUpperCase()}) cadastrado no CRM.`,
-          origem: 'usuario',
-          criadoPorUsuarioId: currentUser?.id,
-          criadoPorNome: currentUser?.nome,
-          criadoEm: new Date().toISOString(),
-        },
-        ...prev.timeline,
-      ],
-    }))
+        await crmService.createActivity({
+          company: currentCompany.id,
+          account: contaId,
+          contact: createdContact.id,
+          type: 'contato_adicionado',
+          description: `Contato Adicionado: ${createdContact.name} (${createdContact.cargo})`,
+        })
 
-    toast({ title: 'Contato cadastrado com sucesso!' })
-    setDialogOpen(false)
-    resetForm()
+        updateCompanyData((prev) => ({
+          ...prev,
+          contacts: [createdContact, ...prev.contacts],
+        }))
+
+        toast({ title: 'Contato cadastrado com sucesso!' })
+        setDialogOpen(false)
+        resetForm()
+      } catch (err: any) {
+        toast({
+          title: 'Erro ao cadastrar contato',
+          description: err?.message,
+          variant: 'destructive',
+        })
+      }
+    })
   }
 
   const resetForm = () => {

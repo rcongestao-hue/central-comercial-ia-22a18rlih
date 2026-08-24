@@ -80,87 +80,74 @@ export default function AgendaPage() {
       acc?.nomeFantasia || 'Conta Comercial',
     )
 
-    const newMeeting: Meeting = {
-      id: `meet_${Date.now()}`,
-      empresaId: currentCompany.id,
-      contaId: meetContaId || accounts[0]?.id || '',
-      titulo: meetTitulo,
-      dataHora: meetDataHora,
-      duracaoMinutos: parseInt(meetDuracao, 10) || 45,
-      tipo: meetTipo,
-      participantes: [currentUser?.nome || 'Executivo Comercial'],
-      anotacoes: meetAnotacoes,
-      resumoIa: meetAnotacoes ? summary.resumo : undefined,
-      proximaAtividade: meetAnotacoes ? summary.proximosPassos[0] : undefined,
-      status: 'agendada',
-      criadoEm: new Date().toISOString(),
-    }
+    import('@/services/crm-service').then(async ({ crmService }) => {
+      try {
+        const createdMeet = await crmService.createMeeting({
+          company: currentCompany.id,
+          account: meetContaId || accounts[0]?.id || undefined,
+          title: meetTitulo,
+          date: meetDataHora,
+          notes: meetAnotacoes,
+          ai_summary: meetAnotacoes ? summary.resumo : undefined,
+          next_steps: meetAnotacoes ? summary.proximosPassos[0] : undefined,
+          status: 'agendada',
+        })
 
-    updateCompanyData((prev) => ({
-      ...prev,
-      meetings: [newMeeting, ...prev.meetings],
-      timeline: [
-        {
-          id: `tl_${Date.now()}`,
-          empresaId: currentCompany.id,
-          contaId: newMeeting.contaId,
-          tipo: 'reuniao_registrada',
-          titulo: `Reunião Agendada: ${newMeeting.titulo}`,
-          descricao: `Agendada para ${formatDateTimePtBR(newMeeting.dataHora)} por ${currentUser?.nome}.`,
-          origem: 'usuario',
-          criadoPorUsuarioId: currentUser?.id,
-          criadoPorNome: currentUser?.nome,
-          criadoEm: new Date().toISOString(),
-        },
-        ...prev.timeline,
-      ],
-    }))
+        await crmService.createActivity({
+          company: currentCompany.id,
+          account: meetContaId || undefined,
+          type: 'reuniao_registrada',
+          description: `Reunião Agendada: ${meetTitulo}`,
+        })
 
-    toast({ title: 'Compromisso agendado na agenda interna!' })
-    setMeetingDialogOpen(false)
-    resetMeetingForm()
+        updateCompanyData((prev) => ({
+          ...prev,
+          meetings: [createdMeet, ...prev.meetings],
+        }))
+
+        toast({ title: 'Compromisso agendado na agenda interna!' })
+        setMeetingDialogOpen(false)
+        resetMeetingForm()
+      } catch (err: any) {
+        toast({
+          title: 'Erro ao agendar reunião',
+          description: err?.message,
+          variant: 'destructive',
+        })
+      }
+    })
   }
 
   const handleCreateActivity = (e: React.FormEvent) => {
     e.preventDefault()
     if (!actTitulo || !actVencimento || !currentCompany) return
 
-    const newActivity: Activity = {
-      id: `act_${Date.now()}`,
-      empresaId: currentCompany.id,
-      contaId: actContaId || accounts[0]?.id || '',
-      titulo: actTitulo,
-      tipo: actTipo,
-      dataVencimento: actVencimento,
-      responsavelId: currentUser?.id || 'usr_exec_1',
-      status: 'pendente',
-      observacoes: actObs,
-      criadoEm: new Date().toISOString(),
-    }
+    import('@/services/crm-service').then(async ({ crmService }) => {
+      try {
+        const createdAct = await crmService.createActivity({
+          company: currentCompany.id,
+          account: actContaId || accounts[0]?.id || undefined,
+          type: 'proximo_passo_criado',
+          description: actTitulo + (actObs ? ` (${actObs})` : ''),
+          metadata: { tipo: actTipo, dataVencimento: actVencimento },
+        })
 
-    updateCompanyData((prev) => ({
-      ...prev,
-      activities: [newActivity, ...prev.activities],
-      timeline: [
-        {
-          id: `tl_${Date.now()}`,
-          empresaId: currentCompany.id,
-          contaId: newActivity.contaId,
-          tipo: 'proximo_passo_criado',
-          titulo: `Atividade Criada: ${newActivity.titulo}`,
-          descricao: `Vencimento em ${formatDatePtBR(newActivity.dataVencimento)}.`,
-          origem: 'usuario',
-          criadoPorUsuarioId: currentUser?.id,
-          criadoPorNome: currentUser?.nome,
-          criadoEm: new Date().toISOString(),
-        },
-        ...prev.timeline,
-      ],
-    }))
+        updateCompanyData((prev) => ({
+          ...prev,
+          activities: [createdAct, ...prev.activities],
+        }))
 
-    toast({ title: 'Atividade comercial adicionada!' })
-    setActivityDialogOpen(false)
-    resetActivityForm()
+        toast({ title: 'Atividade comercial adicionada!' })
+        setActivityDialogOpen(false)
+        resetActivityForm()
+      } catch (err: any) {
+        toast({
+          title: 'Erro ao criar atividade',
+          description: err?.message,
+          variant: 'destructive',
+        })
+      }
+    })
   }
 
   const handleToggleActivityStatus = (actId: string) => {

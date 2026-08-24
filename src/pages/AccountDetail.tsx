@@ -83,7 +83,7 @@ export default function AccountDetail() {
   const [editSegmento, setEditSegmento] = useState(account?.segmento || '')
   const [editCnaePrincipal, setEditCnaePrincipal] = useState(account?.cnaePrincipal || '')
   const [editPorte, setEditPorte] = useState<'1-10' | '11-50' | '51-200' | '201-500' | '500+'>(
-    account?.porte || '51-200',
+    (account?.porte as any) || '51-200',
   )
   const [editTelefone, setEditTelefone] = useState(account?.telefone || '')
   const [editEmail, setEditEmail] = useState(account?.email || '')
@@ -155,7 +155,7 @@ export default function AccountDetail() {
     setEditNomeFantasia(account.nomeFantasia || '')
     setEditSegmento(account.segmento || '')
     setEditCnaePrincipal(account.cnaePrincipal || '')
-    setEditPorte(account.porte || '51-200')
+    setEditPorte((account.porte as any) || '51-200')
     setEditTelefone(account.telefone || '')
     setEditEmail(account.email || '')
     setEditSite(account.site || '')
@@ -292,66 +292,65 @@ export default function AccountDetail() {
         ? `${editCidade}, ${editEstado}`
         : editCidade || editEstado || 'Brasil')
 
-    const updatedAccount: CommercialAccount = {
+    const updatedAccountTemp: CommercialAccount = {
       ...account,
       razaoSocial: editRazaoSocial.trim(),
       nomeFantasia: (editNomeFantasia || editRazaoSocial).trim(),
       cnpj: editCnpj ? formatCnpj(editCnpj) : undefined,
       segmento: editSegmento.trim() || 'B2B Geral',
-      cnaePrincipal: editCnaePrincipal.trim() || undefined,
       porte: editPorte,
-      telefone: editTelefone.trim() || undefined,
-      email: editEmail.trim() || undefined,
-      site: editSite.trim() || undefined,
-      linkedinInstitucional: editLinkedin.trim() || undefined,
-      localizacao: calculatedLocalizacao,
-      endereco: calculatedEndereco || account.endereco || undefined,
-      logradouro: editLogradouro.trim() || undefined,
-      numero: editNumero.trim() || undefined,
-      complemento: editComplemento.trim() || undefined,
-      bairro: editBairro.trim() || undefined,
-      cidade: editCidade.trim() || undefined,
-      estado: editEstado.trim() || undefined,
-      cep: editCep.trim() || undefined,
-      situacaoCadastral: editSituacaoCadastral.trim() || undefined,
-      observacoes: editObservacoes.trim() || undefined,
-      atualizadoEm: new Date().toISOString(),
     }
+    const iaQual = commercialAiService.qualifyAccount(updatedAccountTemp, currentCompany)
 
-    // Re-qualify with updated data
-    const iaQual = commercialAiService.qualifyAccount(updatedAccount, currentCompany)
-    updatedAccount.iaAnalysis = {
-      ...iaQual,
-      geradoEm: new Date().toISOString(),
-    }
+    import('@/services/crm-service').then(async ({ crmService }) => {
+      try {
+        const savedAccount = await crmService.updateAccount(account.id, {
+          razao_social: editRazaoSocial.trim(),
+          nome_fantasia: (editNomeFantasia || editRazaoSocial).trim(),
+          cnpj: editCnpj ? formatCnpj(editCnpj) : undefined,
+          segmento: editSegmento.trim() || 'B2B Geral',
+          cnaePrincipal: editCnaePrincipal.trim() || undefined,
+          porte: editPorte,
+          telefone: editTelefone.trim() || undefined,
+          email: editEmail.trim() || undefined,
+          site: editSite.trim() || undefined,
+          linkedin: editLinkedin.trim() || undefined,
+          localizacao: calculatedLocalizacao,
+          endereco: calculatedEndereco || account.endereco || undefined,
+          logradouro: editLogradouro.trim() || undefined,
+          numero: editNumero.trim() || undefined,
+          complemento: editComplemento.trim() || undefined,
+          bairro: editBairro.trim() || undefined,
+          cidade: editCidade.trim() || undefined,
+          estado: editEstado.trim() || undefined,
+          cep: editCep.trim() || undefined,
+          situacaoCadastral: editSituacaoCadastral.trim() || undefined,
+          observacoes: editObservacoes.trim() || undefined,
+          icp_score: iaQual.scoreIcp,
+          icp_classification: iaQual.aderenciaIcp,
+          ai_summary: iaQual.resumoExecutivo,
+          ai_hypotheses: iaQual.hipoteses,
+          ai_pending_points: iaQual.dadosNaoConfirmados,
+        })
 
-    updateCompanyData((prev) => ({
-      ...prev,
-      accounts: prev.accounts.map((a) => (a.id === account.id ? updatedAccount : a)),
-      timeline: [
-        {
-          id: `tl_${Date.now()}`,
-          empresaId: currentCompany.id,
-          contaId: account.id,
-          tipo: 'oportunidade_atualizada',
-          titulo: 'Dados Cadastrais da Conta Atualizados',
-          descricao: `Informações de ${updatedAccount.razaoSocial} atualizadas por ${
-            currentUser?.nome || 'Usuário'
-          }${updatedAccount.cnpj ? ` (CNPJ: ${updatedAccount.cnpj})` : ''}.`,
-          origem: 'usuario',
-          criadoPorUsuarioId: currentUser?.id,
-          criadoPorNome: currentUser?.nome,
-          criadoEm: new Date().toISOString(),
-        },
-        ...prev.timeline,
-      ],
-    }))
+        updateCompanyData((prev) => ({
+          ...prev,
+          accounts: prev.accounts.map((a) => (a.id === account.id ? savedAccount : a)),
+        }))
 
-    toast({
-      title: 'Conta comercial atualizada!',
-      description: 'Os dados foram salvos e a análise de IA foi re-executada.',
+        toast({
+          title: 'Conta comercial atualizada!',
+          description: 'Os dados foram salvos no banco de dados e a IA foi re-executada.',
+        })
+        setEditDialogOpen(false)
+      } catch (err: any) {
+        toast({
+          title: 'Erro ao atualizar conta',
+          description: err?.message,
+          variant: 'destructive',
+        })
+      }
     })
-    setEditDialogOpen(false)
   }
 
   const handleReQualifyWithAi = () => {
@@ -398,152 +397,144 @@ export default function AccountDetail() {
   const handleStageChange = (newStage: PipelineStage) => {
     if (!currentCompany) return
     const stageLabel = PIPELINE_STAGES.find((s) => s.id === newStage)?.label
-    updateCompanyData((prev) => ({
-      ...prev,
-      accounts: prev.accounts.map((acc) =>
-        acc.id === account.id
-          ? { ...acc, etapaAtual: newStage, atualizadoEm: new Date().toISOString() }
-          : acc,
-      ),
-      timeline: [
-        {
-          id: `tl_${Date.now()}`,
-          empresaId: currentCompany.id,
-          contaId: account.id,
-          tipo: 'oportunidade_atualizada',
-          titulo: `Etapa da Conta Atualizada: ${stageLabel}`,
-          descricao: `Movimentada por ${currentUser?.nome || 'Usuário'} no CRM.`,
-          origem: 'usuario',
-          criadoPorUsuarioId: currentUser?.id,
-          criadoPorNome: currentUser?.nome,
-          criadoEm: new Date().toISOString(),
-        },
-        ...prev.timeline,
-      ],
-    }))
-    toast({ title: 'Etapa alterada', description: `Conta avançou para: ${stageLabel}` })
+    import('@/services/crm-service').then(async ({ crmService }) => {
+      try {
+        await crmService.updateAccount(account.id, { etapa: newStage })
+        await crmService.createActivity({
+          company: currentCompany.id,
+          account: account.id,
+          type: 'oportunidade_atualizada',
+          description: `Etapa da Conta Atualizada para ${stageLabel}`,
+        })
+        updateCompanyData((prev) => ({
+          ...prev,
+          accounts: prev.accounts.map((acc) =>
+            acc.id === account.id ? { ...acc, etapaAtual: newStage, etapa: newStage } : acc,
+          ),
+        }))
+        toast({ title: 'Etapa alterada', description: `Conta avançou para: ${stageLabel}` })
+      } catch (err) {
+        console.error('Error changing stage:', err)
+      }
+    })
   }
 
   const handleUpdateProximoPasso = () => {
     if (!currentCompany) return
-    updateCompanyData((prev) => ({
-      ...prev,
-      accounts: prev.accounts.map((acc) =>
-        acc.id === account.id
-          ? { ...acc, proximoPasso: proximoPassoInput, atualizadoEm: new Date().toISOString() }
-          : acc,
-      ),
-      timeline: [
-        {
-          id: `tl_${Date.now()}`,
-          empresaId: currentCompany.id,
-          contaId: account.id,
-          tipo: 'proximo_passo_criado',
-          titulo: 'Próximo Passo Comercial Definido',
-          descricao: proximoPassoInput,
-          origem: 'usuario',
-          criadoPorUsuarioId: currentUser?.id,
-          criadoPorNome: currentUser?.nome,
-          criadoEm: new Date().toISOString(),
-        },
-        ...prev.timeline,
-      ],
-    }))
-    toast({ title: 'Próximo passo atualizado com sucesso' })
+    import('@/services/crm-service').then(async ({ crmService }) => {
+      try {
+        await crmService.updateAccount(account.id, { proximo_passo: proximoPassoInput })
+        await crmService.createActivity({
+          company: currentCompany.id,
+          account: account.id,
+          type: 'proximo_passo_criado',
+          description: proximoPassoInput,
+        })
+        updateCompanyData((prev) => ({
+          ...prev,
+          accounts: prev.accounts.map((acc) =>
+            acc.id === account.id
+              ? { ...acc, proximoPasso: proximoPassoInput, proximo_passo: proximoPassoInput }
+              : acc,
+          ),
+        }))
+        toast({ title: 'Próximo passo atualizado com sucesso' })
+      } catch (err) {
+        console.error('Error updating proximo passo:', err)
+      }
+    })
   }
 
   const handleAddContact = (e: React.FormEvent) => {
     e.preventDefault()
     if (!ctNome || !currentCompany) return
 
-    const newContact: Contact = {
-      id: `ct_${Date.now()}`,
-      empresaId: currentCompany.id,
-      contaId: account.id,
-      nome: ctNome,
-      cargo: ctCargo,
-      area: ctArea || 'Comercial',
-      email: ctEmail,
-      telefone: ctTelefone,
-      linkedin: ctLinkedin,
-      classificacao: ctClassificacao,
-      origemRelacionamento: ctOrigem,
-      relacaoComExecutivo: ctRelacao,
-      observacoes: ctObs,
-      criadoEm: new Date().toISOString(),
-    }
+    import('@/services/crm-service').then(async ({ crmService }) => {
+      try {
+        const createdContact = await crmService.createContact({
+          company: currentCompany.id,
+          account: account.id,
+          name: ctNome,
+          cargo: ctCargo,
+          area: ctArea || 'Comercial',
+          email: ctEmail,
+          telefone: ctTelefone,
+          linkedin: ctLinkedin,
+          classificacao: ctClassificacao,
+          origem_relacionamento: ctOrigem,
+          relacao_executivo: ctRelacao,
+          observacoes: ctObs,
+        })
 
-    updateCompanyData((prev) => ({
-      ...prev,
-      contacts: [newContact, ...prev.contacts],
-      timeline: [
-        {
-          id: `tl_${Date.now()}`,
-          empresaId: currentCompany.id,
-          contaId: account.id,
-          contatoId: newContact.id,
-          tipo: 'contato_adicionado',
-          titulo: `Contato Adicionado: ${newContact.nome}`,
-          descricao: `${newContact.cargo} (${newContact.classificacao.toUpperCase()}) registrado por ${currentUser?.nome}.`,
-          origem: 'usuario',
-          criadoPorUsuarioId: currentUser?.id,
-          criadoPorNome: currentUser?.nome,
-          criadoEm: new Date().toISOString(),
-        },
-        ...prev.timeline,
-      ],
-    }))
+        await crmService.createActivity({
+          company: currentCompany.id,
+          account: account.id,
+          contact: createdContact.id,
+          type: 'contato_adicionado',
+          description: `Contato Adicionado: ${createdContact.name} (${createdContact.cargo})`,
+        })
 
-    toast({ title: 'Contato registrado na conta!' })
-    setContactDialogOpen(false)
-    setCtNome('')
-    setCtCargo('')
-    setCtEmail('')
-    setCtTelefone('')
+        updateCompanyData((prev) => ({
+          ...prev,
+          contacts: [createdContact, ...prev.contacts],
+        }))
+
+        toast({ title: 'Contato registrado na conta!' })
+        setContactDialogOpen(false)
+        setCtNome('')
+        setCtCargo('')
+        setCtEmail('')
+        setCtTelefone('')
+      } catch (err: any) {
+        toast({
+          title: 'Erro ao cadastrar contato',
+          description: err?.message,
+          variant: 'destructive',
+        })
+      }
+    })
   }
 
   const handleAddOpportunity = (e: React.FormEvent) => {
     e.preventDefault()
     if (!oppTitulo || !currentCompany) return
 
-    const newOpp: Opportunity = {
-      id: `opp_${Date.now()}`,
-      empresaId: currentCompany.id,
-      contaId: account.id,
-      contatoId: oppContatoId || undefined,
-      titulo: oppTitulo,
-      responsavelId: currentUser?.id || 'usr_exec_1',
-      etapa: oppEtapa,
-      valorEstimado: parseFloat(oppValor) || 0,
-      prazoEstimado: oppPrazo || undefined,
-      criadoEm: new Date().toISOString(),
-      atualizadoEm: new Date().toISOString(),
-    }
+    import('@/services/crm-service').then(async ({ crmService }) => {
+      try {
+        const createdOpp = await crmService.createOpportunity({
+          company: currentCompany.id,
+          account: account.id,
+          contact: oppContatoId || undefined,
+          proximo_passo: oppTitulo,
+          etapa: oppEtapa,
+          valor_estimado: parseFloat(oppValor) || 0,
+          prazo: oppPrazo || undefined,
+        })
 
-    updateCompanyData((prev) => ({
-      ...prev,
-      opportunities: [newOpp, ...prev.opportunities],
-      timeline: [
-        {
-          id: `tl_${Date.now()}`,
-          empresaId: currentCompany.id,
-          contaId: account.id,
-          tipo: 'oportunidade_atualizada',
-          titulo: `Nova Oportunidade: ${newOpp.titulo}`,
-          descricao: `Valor estimado: ${formatBRL(newOpp.valorEstimado)} • Etapa: ${oppEtapa}`,
-          origem: 'usuario',
-          criadoPorUsuarioId: currentUser?.id,
-          criadoPorNome: currentUser?.nome,
-          criadoEm: new Date().toISOString(),
-        },
-        ...prev.timeline,
-      ],
-    }))
+        await crmService.createActivity({
+          company: currentCompany.id,
+          account: account.id,
+          type: 'oportunidade_atualizada',
+          description: `Nova Oportunidade: ${oppTitulo} (${formatBRL(parseFloat(oppValor) || 0)})`,
+        })
 
-    toast({ title: 'Oportunidade criada no funil!' })
-    setOppDialogOpen(false)
-    setOppTitulo('')
-    setOppValor('')
+        updateCompanyData((prev) => ({
+          ...prev,
+          opportunities: [createdOpp, ...prev.opportunities],
+        }))
+
+        toast({ title: 'Oportunidade criada no funil!' })
+        setOppDialogOpen(false)
+        setOppTitulo('')
+        setOppValor('')
+      } catch (err: any) {
+        toast({
+          title: 'Erro ao criar oportunidade',
+          description: err?.message,
+          variant: 'destructive',
+        })
+      }
+    })
   }
 
   const handleAddMeeting = (e: React.FormEvent) => {
@@ -555,47 +546,45 @@ export default function AccountDetail() {
       account.nomeFantasia || account.razaoSocial,
     )
 
-    const newMeeting: Meeting = {
-      id: `meet_${Date.now()}`,
-      empresaId: currentCompany.id,
-      contaId: account.id,
-      titulo: meetTitulo,
-      dataHora: meetData,
-      duracaoMinutos: parseInt(meetDuracao, 10) || 45,
-      tipo: 'reuniao',
-      participantes: [currentUser?.nome || 'Executivo Comercial'],
-      anotacoes: meetAnotacoes,
-      resumoIa: meetAnotacoes ? summary.resumo : undefined,
-      proximaAtividade: meetAnotacoes ? summary.proximosPassos[0] : undefined,
-      status: 'concluida',
-      criadoEm: new Date().toISOString(),
-    }
+    import('@/services/crm-service').then(async ({ crmService }) => {
+      try {
+        const createdMeet = await crmService.createMeeting({
+          company: currentCompany.id,
+          account: account.id,
+          title: meetTitulo,
+          date: meetData,
+          participants: [currentUser?.nome || 'Executivo Comercial'],
+          notes: meetAnotacoes,
+          ai_summary: meetAnotacoes ? summary.resumo : undefined,
+          next_steps: meetAnotacoes ? summary.proximosPassos[0] : undefined,
+          status: 'realizada',
+        })
 
-    updateCompanyData((prev) => ({
-      ...prev,
-      meetings: [newMeeting, ...prev.meetings],
-      timeline: [
-        {
-          id: `tl_${Date.now()}`,
-          empresaId: currentCompany.id,
-          contaId: account.id,
-          tipo: 'reuniao_registrada',
-          titulo: `Reunião Concluída: ${newMeeting.titulo}`,
-          descricao: `Anotações registradas e resumidas via IA nativa.`,
-          origem: 'usuario',
-          criadoPorUsuarioId: currentUser?.id,
-          criadoPorNome: currentUser?.nome,
-          criadoEm: new Date().toISOString(),
-        },
-        ...prev.timeline,
-      ],
-    }))
+        await crmService.createActivity({
+          company: currentCompany.id,
+          account: account.id,
+          type: 'reuniao_registrada',
+          description: `Reunião Concluída: ${meetTitulo}`,
+        })
 
-    toast({ title: 'Reunião e ata registradas com sucesso!' })
-    setMeetDialogOpen(false)
-    setMeetTitulo('')
-    setMeetData('')
-    setMeetAnotacoes('')
+        updateCompanyData((prev) => ({
+          ...prev,
+          meetings: [createdMeet, ...prev.meetings],
+        }))
+
+        toast({ title: 'Reunião e ata registradas com sucesso!' })
+        setMeetDialogOpen(false)
+        setMeetTitulo('')
+        setMeetData('')
+        setMeetAnotacoes('')
+      } catch (err: any) {
+        toast({
+          title: 'Erro ao registrar reunião',
+          description: err?.message,
+          variant: 'destructive',
+        })
+      }
+    })
   }
 
   return (

@@ -86,6 +86,7 @@ export default function SettingsPage() {
     }
 
     updateCurrentCompany({
+      name: compNome,
       nome: compNome,
       nomeFantasia: compFantasia,
       perfilClienteIdeal: compIcp,
@@ -174,8 +175,8 @@ export default function SettingsPage() {
           <span>Configurações & Administração</span>
         </h1>
         <p className="text-sm text-slate-500 mt-0.5">
-          Gestão de usuários por perfil, diretrizes da empresa, provedor de IA e segurança
-          localStorage.
+          Gestão de usuários por perfil, diretrizes da empresa, provedor de IA e segurança banco de
+          dados isolado.
         </p>
       </div>
 
@@ -436,11 +437,11 @@ export default function SettingsPage() {
             <div>
               <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <Database className="w-5 h-5 text-blue-600" />
-                <span>Segurança & Armazenamento Local (localStorage)</span>
+                <span>Segurança & Armazenamento Seguro (Multi-Tenancy)</span>
               </CardTitle>
               <CardDescription className="text-xs text-slate-500 mt-1">
-                Seus dados ficam armazenados exclusivamente no seu navegador com isolamento por
-                empresa.
+                Seus dados ficam armazenados de forma estruturada no backend PocketBase com
+                isolamento seguro por tenant e regras de acesso restritas.
               </CardDescription>
             </div>
 

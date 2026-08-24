@@ -30,22 +30,24 @@ export default function Login() {
     }
   }, [isAuthenticated, navigate])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setLoading(true)
 
-    setTimeout(() => {
-      const res = login(email, senha)
+    try {
+      const res = await login(email, password)
       setLoading(false)
       if (res.success) {
         navigate('/')
       } else {
         setError(res.message || 'Erro ao realizar login.')
       }
-    }, 400)
+    } catch (err: any) {
+      setLoading(false)
+      setError(err?.message || 'Falha ao autenticar.')
+    }
   }
-
   const handleDemoLogin = () => {
     setLoading(true)
     setTimeout(() => {

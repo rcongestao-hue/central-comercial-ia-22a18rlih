@@ -1,30 +1,106 @@
 // Types for Central Comercial IA
 
-export type Role = 'admin' | 'gestor' | 'executivo' | 'visualizador'
+export type Profile =
+  | 'proprietario'
+  | 'administrador'
+  | 'diretor_comercial'
+  | 'gestor'
+  | 'executivo'
+  | 'visualizador'
 
-export interface User {
+// Alias for backwards compatibility where needed
+export type Role = Profile | 'admin'
+
+export interface PbUser {
   id: string
-  empresaId: string
-  nome: string
-  email: string
-  senha?: string
-  cargo: string
-  role: Role
-  avatarUrl?: string
-  ativo: boolean
-  criadoEm: string
+  name?: string
+  email?: string
+  avatar?: string
+  created?: string
+  updated?: string
 }
 
 export interface Company {
   id: string
-  nome: string
+  name: string
+  slug?: string
+  segment?: string
+  region?: string
+  brand_color?: string
+  logo?: string
+  created?: string
+  updated?: string
+  // Legacy fields mapped for compatibility
+  nome?: string
   nomeFantasia?: string
-  segmentosPrioritarios: string[]
-  produtosServicos: string[]
-  perfilClienteIdeal: string // ICP
-  diferenciais: string[]
-  regiaoAtuacao: string
-  criadoEm: string
+  segmentosPrioritarios?: string[]
+  produtosServicos?: string[]
+  perfilClienteIdeal?: string
+  diferenciais?: string[]
+  regiaoAtuacao?: string
+}
+
+export interface CompanyUser {
+  id: string
+  company: string
+  user: string
+  profile: Profile
+  status: 'ativo' | 'inativo' | 'suspenso'
+  last_access?: string
+  created?: string
+  updated?: string
+  // Expand relations
+  expand?: {
+    user?: PbUser
+    company?: Company
+  }
+}
+
+export interface Team {
+  id: string
+  company: string
+  name: string
+  manager?: string
+  region?: string
+  portfolio?: string
+  created?: string
+  updated?: string
+  expand?: {
+    manager?: CompanyUser
+  }
+}
+
+export interface TeamMember {
+  id: string
+  team: string
+  user: string
+  role?: string
+  created?: string
+  expand?: {
+    team?: Team
+    user?: CompanyUser
+  }
+}
+
+export interface Invitation {
+  id: string
+  company: string
+  email: string
+  profile: Profile
+  team?: string
+  manager?: string
+  invited_by?: string
+  status: 'pendente' | 'aceito' | 'expirado' | 'revogado'
+  token?: string
+  expires_at?: string
+  created?: string
+  updated?: string
+  expand?: {
+    company?: Company
+    team?: Team
+    manager?: CompanyUser
+    invited_by?: CompanyUser
+  }
 }
 
 export type PipelineStage =
@@ -147,13 +223,15 @@ export const CONTACT_CLASSIFICATIONS: { id: ContactClassification; label: string
 
 export interface CommercialAccount {
   id: string
-  empresaId: string
-  razaoSocial: string
-  nomeFantasia: string
+  company: string
+  responsible?: string
+  team?: string
+  razao_social?: string
+  nome_fantasia?: string
   cnpj?: string
   site?: string
-  segmento: string
-  localizacao: string
+  segmento?: string
+  localizacao?: string
   endereco?: string
   logradouro?: string
   numero?: string
@@ -166,44 +244,201 @@ export interface CommercialAccount {
   telefone?: string
   email?: string
   situacaoCadastral?: string
-  linkedinInstitucional?: string
-  responsavelComercialId: string
-  etapaAtual: PipelineStage
+  porte?: string
+  linkedin?: string
+  etapa?: string
+  ultima_atividade?: string
+  proximo_passo?: string
+  observacoes?: string
+  icp_score?: number
+  icp_classification?: string
+  ai_summary?: string
+  ai_hypotheses?: any
+  ai_pending_points?: any
+  ai_confirmed_info?: any
+  sources?: any
+  identification_status?: 'confirmada' | 'provavel' | 'pendente_validacao' | 'nao_identificada'
+  created?: string
+  updated?: string
+  // Legacy UI mapped fields
+  empresaId?: string
+  razaoSocial?: string
+  nomeFantasia?: string
+  responsavelComercialId?: string
+  etapaAtual?: PipelineStage
   ultimaAtividade?: string
   proximoPasso?: string
   proximoPassoData?: string
   motivoPerda?: string
-  observacoes?: string
-  porte?: '1-10' | '11-50' | '51-200' | '201-500' | '500+'
+  linkedinInstitucional?: string
   iaAnalysis?: {
     resumoExecutivo: string
     aderenciaIcp: 'Alta' | 'Média' | 'Baixa'
-    scoreIcp: number // 0-100
+    scoreIcp: number
     necessidadesSugeridas: string[]
     perguntasComerciais: string[]
     hipoteses: string[]
     dadosNaoConfirmados: string[]
     geradoEm: string
   }
-  criadoEm: string
-  atualizadoEm: string
+  criadoEm?: string
+  atualizadoEm?: string
+  expand?: {
+    responsible?: CompanyUser
+    team?: Team
+  }
 }
 
 export interface Contact {
   id: string
-  empresaId: string
-  contaId: string
-  nome: string
-  cargo: string
-  area: string
-  email: string
-  telefone: string
+  company: string
+  account: string
+  name: string
+  cargo?: string
+  area?: string
+  email?: string
+  telefone?: string
   linkedin?: string
-  classificacao: ContactClassification
-  origemRelacionamento: string
-  relacaoComExecutivo?: string
+  classificacao?: string
+  origem_relacionamento?: string
+  relacao_executivo?: string
   observacoes?: string
-  criadoEm: string
+  created?: string
+  updated?: string
+  // Legacy UI mapped fields
+  empresaId?: string
+  contaId?: string
+  nome?: string
+  origemRelacionamento?: string
+  relacaoComExecutivo?: string
+  criadoEm?: string
+}
+
+export interface Opportunity {
+  id: string
+  company: string
+  account: string
+  contact?: string
+  responsible?: string
+  etapa: string
+  valor_estimado?: number
+  prazo?: string
+  proximo_passo?: string
+  motivo_perda?: string
+  historico?: any
+  created?: string
+  updated?: string
+  // Legacy UI mapped fields
+  empresaId?: string
+  contaId?: string
+  contatoId?: string
+  titulo?: string
+  responsavelId?: string
+  valorEstimado?: number
+  proximaAcao?: string
+  prazoEstimado?: string
+  observacoes?: string
+  criadoEm?: string
+  atualizadoEm?: string
+  expand?: {
+    account?: CommercialAccount
+    contact?: Contact
+    responsible?: CompanyUser
+  }
+}
+
+export interface Activity {
+  id: string
+  company: string
+  account?: string
+  contact?: string
+  user?: string
+  type: string
+  origin?: 'usuario' | 'ia' | 'integracao'
+  description?: string
+  metadata?: any
+  created?: string
+  // Legacy UI mapped fields
+  empresaId?: string
+  contaId?: string
+  titulo?: string
+  tipo?: string
+  dataVencimento?: string
+  responsavelId?: string
+  status?: 'pendente' | 'concluida' | 'atrasada'
+  observacoes?: string
+  criadoEm?: string
+}
+
+export interface Meeting {
+  id: string
+  company: string
+  account?: string
+  title: string
+  date: string
+  time?: string
+  participants?: string[]
+  notes?: string
+  ai_summary?: string
+  next_steps?: string
+  status?: 'agendada' | 'realizada' | 'cancelada'
+  created?: string
+  updated?: string
+  // Legacy UI mapped fields
+  empresaId?: string
+  contaId?: string
+  contatoId?: string
+  titulo?: string
+  dataHora?: string
+  duracaoMinutos?: number
+  tipo?: 'reuniao' | 'followup' | 'ligacao' | 'retorno'
+  anotacoes?: string
+  resumoIa?: string
+  proximaAtividade?: string
+  criadoEm?: string
+}
+
+export interface Product {
+  id: string
+  company: string
+  name: string
+  category?: string
+  description?: string
+  problems_solved?: string
+  benefits?: string
+  differentiators?: string
+  target_segments?: any
+  ideal_company_size?: string
+  target_region?: string
+  decision_maker_profile?: string
+  need_signals?: string
+  exclusion_criteria?: string
+  commercial_notes?: string
+  created?: string
+  updated?: string
+}
+
+export interface OnboardingConfig {
+  id: string
+  company: string
+  differentiators?: any
+  priority_segments?: any
+  products_services?: any
+  icp?: any
+  created?: string
+  updated?: string
+}
+
+export interface Notification {
+  id: string
+  company: string
+  user: string
+  title: string
+  description?: string
+  read?: boolean
+  type?: string
+  link?: string
+  created?: string
 }
 
 export type ChannelType = 'whatsapp' | 'email' | 'linkedin' | 'telefone'
@@ -223,8 +458,6 @@ export interface ProspectingDraft {
   criadoEm: string
   atualizadoEm: string
 }
-
-export type TimelineOrigin = 'usuario' | 'ia' | 'integracao'
 
 export interface TimelineEvent {
   id: string
@@ -246,57 +479,10 @@ export interface TimelineEvent {
     | 'oportunidade_atualizada'
   titulo: string
   descricao: string
-  origem: TimelineOrigin
+  origem: 'usuario' | 'ia' | 'integracao'
   criadoPorUsuarioId?: string
   criadoPorNome?: string
   metadados?: Record<string, unknown>
-  criadoEm: string
-}
-
-export interface Opportunity {
-  id: string
-  empresaId: string
-  contaId: string
-  contatoId?: string
-  titulo: string
-  responsavelId: string
-  etapa: PipelineStage
-  valorEstimado: number
-  proximaAcao?: string
-  prazoEstimado?: string
-  motivoPerda?: string
-  observacoes?: string
-  criadoEm: string
-  atualizadoEm: string
-}
-
-export interface Meeting {
-  id: string
-  empresaId: string
-  contaId: string
-  contatoId?: string
-  titulo: string
-  dataHora: string
-  duracaoMinutos: number
-  tipo: 'reuniao' | 'followup' | 'ligacao' | 'retorno'
-  participantes: string[]
-  anotacoes?: string
-  resumoIa?: string
-  proximaAtividade?: string
-  status: 'agendada' | 'concluida' | 'cancelada'
-  criadoEm: string
-}
-
-export interface Activity {
-  id: string
-  empresaId: string
-  contaId: string
-  titulo: string
-  tipo: 'followup' | 'ligacao' | 'retorno' | 'reuniao' | 'proposta'
-  dataVencimento: string
-  responsavelId: string
-  status: 'pendente' | 'concluida' | 'atrasada'
-  observacoes?: string
   criadoEm: string
 }
 
@@ -317,4 +503,17 @@ export interface IntegrationCard {
   exigeAprovacao: string
   custos: string
   funcionaSemIntegracao: string
+}
+
+export interface User {
+  id: string
+  empresaId: string
+  nome: string
+  email: string
+  senha?: string
+  cargo: string
+  role: Role
+  avatarUrl?: string
+  ativo: boolean
+  criadoEm: string
 }

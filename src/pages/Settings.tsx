@@ -22,11 +22,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { crmService } from '@/services/crm-service'
 import {
   Settings,
   Building2,
   Users,
   Shield,
+  ShieldCheck,
   Cpu,
   Database,
   Plus,
@@ -44,6 +46,7 @@ export default function SettingsPage() {
   const {
     currentUser,
     currentCompany,
+    companyUser,
     userList,
     createUser,
     updateUser,
@@ -54,7 +57,29 @@ export default function SettingsPage() {
   } = useAuth()
   const { toast } = useToast()
 
-  const isAdmin = currentUser?.role === 'admin'
+  const [healthStatus, setHealthStatus] = useState<any>(null)
+  const [loadingHealth, setLoadingHealth] = useState(false)
+
+  const checkHealth = async () => {
+    setLoadingHealth(true)
+    try {
+      const data = await crmService.getHealthCheck()
+      setHealthStatus(data)
+    } catch (_) {
+      setHealthStatus({ status: 'error', pocketbaseConnected: false })
+    } finally {
+      setLoadingHealth(false)
+    }
+  }
+
+  React.useEffect(() => {
+    checkHealth()
+  }, [])
+
+  const isAdmin =
+    currentUser?.role === 'admin' ||
+    companyUser?.profile === 'proprietario' ||
+    companyUser?.profile === 'administrador'
 
   // Company Form State
   const [compNome, setCompNome] = useState(currentCompany?.nome || '')
@@ -70,7 +95,7 @@ export default function SettingsPage() {
   const [newUserEmail, setNewUserEmail] = useState('')
   const [newUserCargo, setNewUserCargo] = useState('')
   const [newUserRole, setNewUserRole] = useState<Role>('executivo')
-  const [newUserSenha, setNewUserSenha] = useState('123456')
+  const [newUserSenha, setNewUserSenha] = useState('')
 
   // AI Provider State (Future BYOK)
   const [aiProvider, setAiProvider] = useState<'skip_native' | 'openai' | 'anthropic' | 'gemini'>(
@@ -111,8 +136,7 @@ export default function SettingsPage() {
       email: newUserEmail,
       cargo: newUserCargo || 'Executivo Comercial',
       role: newUserRole,
-      senha: newUserSenha || '123456',
-      ativo: true,
+      senha: newUserSenha || undefined,
     })
 
     if (success) {
@@ -148,21 +172,33 @@ export default function SettingsPage() {
   }
 
   const roleLabels: Record<Role, { label: string; desc: string }> = {
+    proprietario: {
+      label: 'Proprietário',
+      desc: 'Acesso administrativo completo à empresa, transferência e exclusão.',
+    },
+    administrador: {
+      label: 'Administrador',
+      desc: 'Administra usuários, equipes, configurações e dados da empresa.',
+    },
     admin: {
       label: 'Administrador',
       desc: 'Acesso total: gerencia usuários, diretrizes da empresa e integrações',
     },
+    diretor_comercial: {
+      label: 'Diretor Comercial',
+      desc: 'Visualiza todos os dados comerciais e administra gestores e executivos.',
+    },
     gestor: {
       label: 'Gestor Comercial',
-      desc: 'Acesso ao painel do gestor, relatórios e todas as contas/oportunidades',
+      desc: 'Visualiza e administra sua equipe e carteira autorizada.',
     },
     executivo: {
       label: 'Executivo Comercial',
-      desc: 'Opera contas, contatos, pipeline, prospecção assistida e agenda',
+      desc: 'Acessa registros atribuídos a ele ou compartilhados com a equipe.',
     },
     visualizador: {
       label: 'Visualizador',
-      desc: 'Visualização de dados comerciais e relatórios, sem permissão de edição',
+      desc: 'Acesso somente de leitura ao escopo autorizado.',
     },
   }
 
@@ -451,11 +487,73 @@ export default function SettingsPage() {
               </span>
               <ul className="list-disc pl-5 space-y-1 text-slate-600">
                 <li>
-                  Separação estrita de dados entre diferentes empresas cadastradas no navegador.
+                  Separação estrita de dados entre diferentes empresas via API Rules e Hooks no
+                  PocketBase.
                 </li>
                 <li>Sem envio não autorizado de dados confidenciais para servidores externos.</li>
-                <li>Nenhuma credencial exposta em repositórios públicos.</li>
+                <li>Nenhuma credencial ou token fixo em repositório público ou código frontend.</li>
               </ul>
+            </div>
+
+            {/* Health Check Status Panel */}
+            <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <span>Diagnóstico do Ambiente (Health Check)</span>
+                </span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={checkHealth}
+                  disabled={loadingHealth}
+                  className="h-7 text-xs text-blue-600"
+                >
+                  <RefreshCw
+                    className={`w-3.5 h-3.5 mr-1 ${loadingHealth ? 'animate-spin' : ''}`}
+                  />
+                  <span>Atualizar</span>
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                  <span className="text-slate-500 block text-[11px]">PocketBase</span>
+                  <span className="font-semibold text-emerald-700">
+                    {healthStatus?.pocketbaseConnected ? '● Conectado' : '○ Indisponível'}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                  <span className="text-slate-500 block text-[11px]">Migrations</span>
+                  <span className="font-semibold text-emerald-700">
+                    {healthStatus?.migrationsApplied ? '● Aplicadas' : '○ Pendente'}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                  <span className="text-slate-500 block text-[11px]">Vínculo Multiempresa</span>
+                  <span className="font-semibold text-blue-700">
+                    {companyUser?.status === 'ativo' ? '● Vínculo Ativo' : '○ Sem vínculo'}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                  <span className="text-slate-500 block text-[11px]">Empresa Ativa</span>
+                  <span className="font-semibold text-slate-800 truncate block">
+                    {currentCompany?.name || 'Nenhuma'}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                  <span className="text-slate-500 block text-[11px]">Perfil na Empresa</span>
+                  <span className="font-semibold text-slate-800 capitalize">
+                    {companyUser?.profile || 'Nenhum'}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                  <span className="text-slate-500 block text-[11px]">Realtime</span>
+                  <span className="font-semibold text-emerald-700">
+                    {healthStatus?.realtimeAvailable ? '● Operacional' : '○ Indisponível'}
+                  </span>
+                </div>
+              </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-3 pt-2">
@@ -525,16 +623,6 @@ export default function SettingsPage() {
                   <SelectItem value="visualizador">Visualizador (Apenas Leitura)</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="space-y-1">
-              <Label className="text-xs font-semibold">Senha Inicial</Label>
-              <Input
-                type="password"
-                value={newUserSenha}
-                onChange={(e) => setNewUserSenha(e.target.value)}
-                required
-              />
             </div>
 
             <div className="flex justify-end gap-2 pt-2">

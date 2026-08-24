@@ -39,7 +39,6 @@ interface AuthContextType {
   role: Role | null
   // Actions
   login: (email: string, senha?: string) => Promise<{ success: boolean; message?: string }>
-  loginAsDemo: () => Promise<void>
   logout: () => void
   switchCompany: (companyId: string) => Promise<void>
   registerCompanyAndAdmin: (
@@ -277,24 +276,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }
 
-  const loginAsDemo = async () => {
-    try {
-      // Tenta login com a conta de demonstração inicial
-      const res = await login('demo@aurorasolucoes.com', 'Skip@Pass123')
-      if (!res.success) {
-        // Fallback para admin inicial caso exista
-        await login('rcongestao@gmail.com', 'Skip@Pass')
-      }
-    } catch (err) {
-      console.error('Demo login error:', err)
-      toast({
-        title: 'Erro no login demo',
-        description: 'Não foi possível entrar com a conta de demonstração.',
-        variant: 'destructive',
-      })
-    }
-  }
-
   const logout = () => {
     pb.authStore.clear()
     localStorage.removeItem('central_ia_last_company_id')
@@ -355,8 +336,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // 1. If not authenticated, create user or login
       if (!authUser) {
         const userEmail = adminInput.email || ''
-        const userPass = adminInput.senha || 'Skip@Pass123'
+        const userPass = adminInput.senha
         const userName = adminInput.nome || 'Administrador'
+
+        if (!userPass || userPass.length < 8) {
+          return {
+            success: false,
+            error: 'A senha de acesso deve ter pelo menos 8 caracteres.',
+          }
+        }
 
         try {
           authUser = await pb.collection('users').create({
@@ -374,7 +362,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } catch (_) {
             return {
               success: false,
-              error: 'Erro ao criar usuário: ' + (uErr.message || 'Verifique os dados.'),
+              error:
+                'Erro ao cadastrar ou autenticar usuário: ' +
+                (uErr.message || 'Verifique os dados.'),
             }
           }
         }
@@ -486,7 +476,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       toast({
         title: 'Convite criado com sucesso!',
-        description: `Convite gerado para ${userData.email} com perfil ${(userData.role || 'executivo').toUpperCase()}.`,
+        description: `Link de convite gerado. Copie e envie manualmente ao usuário (${userData.email}).`,
       })
 
       await initAuth()
@@ -658,7 +648,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading,
         role,
         login,
-        loginAsDemo,
         logout,
         switchCompany,
         registerCompanyAndAdmin,

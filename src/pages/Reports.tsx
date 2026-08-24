@@ -206,7 +206,7 @@ export default function ReportsPage() {
                     <p className="text-slate-500">{acc?.nomeFantasia || 'Conta'}</p>
                     <p className="text-slate-700 font-medium pt-1">
                       <strong>Motivo:</strong>{' '}
-                      {opp.motivoPerda || 'Preço / Concorrente / Solução Interna'}
+                      {opp.motivo_perda || 'Preço / Concorrente / Solução Interna'}
                     </p>
                   </div>
                 )

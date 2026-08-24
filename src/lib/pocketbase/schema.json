@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-24T17:42:17.074Z",
+  "generatedAt": "2026-08-24T18:43:24.115Z",
   "collections": [
     {
       "name": "users",
@@ -48,11 +48,11 @@
       "name": "companies",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
+        "list": "@request.auth.id != '' && company_users_via_company.user ?= @request.auth.id && company_users_via_company.status ?= 'ativo'",
+        "view": "@request.auth.id != '' && company_users_via_company.user ?= @request.auth.id && company_users_via_company.status ?= 'ativo'",
         "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "update": "@request.auth.id != '' && company_users_via_company.user ?= @request.auth.id && company_users_via_company.status ?= 'ativo' && (company_users_via_company.profile ?= 'proprietario' || company_users_via_company.profile ?= 'administrador')",
+        "delete": "@request.auth.id != '' && company_users_via_company.user ?= @request.auth.id && company_users_via_company.status ?= 'ativo' && company_users_via_company.profile ?= 'proprietario'"
       },
       "fields": [
         {
@@ -112,11 +112,11 @@
       "name": "company_users",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
+        "list": "@request.auth.id != '' && (user = @request.auth.id || (company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'))",
+        "view": "@request.auth.id != '' && (user = @request.auth.id || (company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'))",
         "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "update": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo' && (company.company_users_via_company.profile ?= 'proprietario' || company.company_users_via_company.profile ?= 'administrador')",
+        "delete": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo' && (company.company_users_via_company.profile ?= 'proprietario' || company.company_users_via_company.profile ?= 'administrador')"
       },
       "fields": [
         {
@@ -181,11 +181,11 @@
       "name": "teams",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'",
+        "view": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'",
+        "create": "@request.auth.id != '' && @request.body.company.company_users_via_company.user ?= @request.auth.id && @request.body.company.company_users_via_company.status ?= 'ativo' && (@request.body.company.company_users_via_company.profile ?= 'proprietario' || @request.body.company.company_users_via_company.profile ?= 'administrador' || @request.body.company.company_users_via_company.profile ?= 'diretor_comercial')",
+        "update": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo' && (company.company_users_via_company.profile ?= 'proprietario' || company.company_users_via_company.profile ?= 'administrador' || company.company_users_via_company.profile ?= 'diretor_comercial')",
+        "delete": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo' && (company.company_users_via_company.profile ?= 'proprietario' || company.company_users_via_company.profile ?= 'administrador')"
       },
       "fields": [
         {
@@ -241,11 +241,11 @@
       "name": "team_members",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && team.company.company_users_via_company.user ?= @request.auth.id && team.company.company_users_via_company.status ?= 'ativo'",
+        "view": "@request.auth.id != '' && team.company.company_users_via_company.user ?= @request.auth.id && team.company.company_users_via_company.status ?= 'ativo'",
+        "create": "@request.auth.id != '' && @request.body.team.company.company_users_via_company.user ?= @request.auth.id && @request.body.team.company.company_users_via_company.status ?= 'ativo' && (@request.body.team.company.company_users_via_company.profile ?= 'proprietario' || @request.body.team.company.company_users_via_company.profile ?= 'administrador' || @request.body.team.company.company_users_via_company.profile ?= 'diretor_comercial' || @request.body.team.company.company_users_via_company.profile ?= 'gestor')",
+        "update": "@request.auth.id != '' && team.company.company_users_via_company.user ?= @request.auth.id && team.company.company_users_via_company.status ?= 'ativo' && (team.company.company_users_via_company.profile ?= 'proprietario' || team.company.company_users_via_company.profile ?= 'administrador' || team.company.company_users_via_company.profile ?= 'diretor_comercial' || team.company.company_users_via_company.profile ?= 'gestor')",
+        "delete": "@request.auth.id != '' && team.company.company_users_via_company.user ?= @request.auth.id && team.company.company_users_via_company.status ?= 'ativo' && (team.company.company_users_via_company.profile ?= 'proprietario' || team.company.company_users_via_company.profile ?= 'administrador' || team.company.company_users_via_company.profile ?= 'diretor_comercial' || team.company.company_users_via_company.profile ?= 'gestor')"
       },
       "fields": [
         {
@@ -282,11 +282,11 @@
       "name": "invitations",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo' && (company.company_users_via_company.profile ?= 'proprietario' || company.company_users_via_company.profile ?= 'administrador' || company.company_users_via_company.profile ?= 'diretor_comercial')",
+        "view": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo' && (company.company_users_via_company.profile ?= 'proprietario' || company.company_users_via_company.profile ?= 'administrador' || company.company_users_via_company.profile ?= 'diretor_comercial')",
+        "create": "@request.auth.id != '' && @request.body.company.company_users_via_company.user ?= @request.auth.id && @request.body.company.company_users_via_company.status ?= 'ativo' && (@request.body.company.company_users_via_company.profile ?= 'proprietario' || @request.body.company.company_users_via_company.profile ?= 'administrador' || @request.body.company.company_users_via_company.profile ?= 'diretor_comercial')",
+        "update": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo' && (company.company_users_via_company.profile ?= 'proprietario' || company.company_users_via_company.profile ?= 'administrador')",
+        "delete": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo' && (company.company_users_via_company.profile ?= 'proprietario' || company.company_users_via_company.profile ?= 'administrador')"
       },
       "fields": [
         {
@@ -379,11 +379,11 @@
       "name": "commercial_accounts",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'",
+        "view": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'",
+        "create": "@request.auth.id != '' && @request.body.company.company_users_via_company.user ?= @request.auth.id && @request.body.company.company_users_via_company.status ?= 'ativo'",
+        "update": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'",
+        "delete": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'"
       },
       "fields": [
         {
@@ -624,11 +624,11 @@
       "name": "contacts",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'",
+        "view": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'",
+        "create": "@request.auth.id != '' && @request.body.company.company_users_via_company.user ?= @request.auth.id && @request.body.company.company_users_via_company.status ?= 'ativo'",
+        "update": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'",
+        "delete": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'"
       },
       "fields": [
         {
@@ -739,11 +739,11 @@
       "name": "opportunities",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'",
+        "view": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'",
+        "create": "@request.auth.id != '' && @request.body.company.company_users_via_company.user ?= @request.auth.id && @request.body.company.company_users_via_company.status ?= 'ativo'",
+        "update": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'",
+        "delete": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'"
       },
       "fields": [
         {
@@ -849,11 +849,11 @@
       "name": "activities",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'",
+        "view": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'",
+        "create": "@request.auth.id != '' && @request.body.company.company_users_via_company.user ?= @request.auth.id && @request.body.company.company_users_via_company.status ?= 'ativo'",
+        "update": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'",
+        "delete": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'"
       },
       "fields": [
         {
@@ -941,11 +941,11 @@
       "name": "meetings",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'",
+        "view": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'",
+        "create": "@request.auth.id != '' && @request.body.company.company_users_via_company.user ?= @request.auth.id && @request.body.company.company_users_via_company.status ?= 'ativo'",
+        "update": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'",
+        "delete": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'"
       },
       "fields": [
         {
@@ -1032,11 +1032,11 @@
       "name": "products",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'",
+        "view": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'",
+        "create": "@request.auth.id != '' && @request.body.company.company_users_via_company.user ?= @request.auth.id && @request.body.company.company_users_via_company.status ?= 'ativo'",
+        "update": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'",
+        "delete": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'"
       },
       "fields": [
         {
@@ -1145,11 +1145,11 @@
       "name": "onboarding_config",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'",
+        "view": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'",
+        "create": "@request.auth.id != '' && @request.body.company.company_users_via_company.user ?= @request.auth.id && @request.body.company.company_users_via_company.status ?= 'ativo'",
+        "update": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'",
+        "delete": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'"
       },
       "fields": [
         {
@@ -1204,11 +1204,11 @@
       "name": "notifications",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'",
+        "view": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'",
+        "create": "@request.auth.id != '' && @request.body.company.company_users_via_company.user ?= @request.auth.id && @request.body.company.company_users_via_company.status ?= 'ativo'",
+        "update": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'",
+        "delete": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo'"
       },
       "fields": [
         {
@@ -1264,6 +1264,76 @@
         }
       ],
       "indexes": ["CREATE INDEX idx_notif_user ON notifications (user)"]
+    },
+    {
+      "name": "audit_logs",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo' && (company.company_users_via_company.profile ?= 'proprietario' || company.company_users_via_company.profile ?= 'administrador')",
+        "view": "@request.auth.id != '' && company.company_users_via_company.user ?= @request.auth.id && company.company_users_via_company.status ?= 'ativo' && (company.company_users_via_company.profile ?= 'proprietario' || company.company_users_via_company.profile ?= 'administrador')",
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "company",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "action",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "target_type",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "target_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "actor",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "details",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_audit_logs_company ON audit_logs (company)",
+        "CREATE INDEX idx_audit_logs_action ON audit_logs (action)",
+        "CREATE INDEX idx_audit_logs_actor ON audit_logs (actor)"
+      ]
     }
   ]
 }

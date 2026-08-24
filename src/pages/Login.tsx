@@ -15,7 +15,7 @@ import {
 import { Sparkles, CheckCircle2, ArrowRight, ShieldCheck, Zap, Lock } from 'lucide-react'
 
 export default function Login() {
-  const { login, loginAsDemo, isAuthenticated } = useAuth()
+  const { login, isAuthenticated } = useAuth()
   const navigate = useNavigate()
 
   const [email, setEmail] = useState('')
@@ -48,14 +48,6 @@ export default function Login() {
       setError(err?.message || 'Falha ao autenticar.')
     }
   }
-  const handleDemoLogin = () => {
-    setLoading(true)
-    setTimeout(() => {
-      loginAsDemo()
-      setLoading(false)
-      navigate('/')
-    }, 300)
-  }
 
   return (
     <div className="min-h-screen bg-[#0E1B2F] flex items-center justify-center p-4 sm:p-6 lg:p-8">
@@ -73,7 +65,8 @@ export default function Login() {
 
           <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
             Plataforma independente de produtividade comercial B2B. Acelere qualificação de contas,
-            geração de abordagens assistidas, follow-ups e gestão de equipe sem complexidade.
+            geração de abordagens assistidas, follow-ups e gestão de equipe com isolamento estrito
+            multiempresa.
           </p>
 
           <div className="space-y-3 pt-2">
@@ -81,7 +74,7 @@ export default function Login() {
               'Qualificação de Contas e Aderência ao Perfil de Cliente Ideal (ICP)',
               'Prospecção Assistida por IA nos canais oficiais (WhatsApp, E-mail, LinkedIn)',
               'Pipeline Visual e Agenda Interna Integrada (sem dependência externa)',
-              'Estrutura Multiempresa Segura com Perfis de Acesso (Admin, Gestor, Executivo)',
+              'Estrutura Multiempresa Segura com Perfis de Acesso (Owner, Admin, Gestor, Executivo)',
             ].map((text, i) => (
               <div key={i} className="flex items-start gap-3">
                 <CheckCircle2 className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
@@ -93,8 +86,8 @@ export default function Login() {
           <div className="p-4 rounded-xl bg-slate-800/60 border border-slate-700/60 flex items-center gap-3">
             <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
             <p className="text-xs text-slate-300">
-              <strong className="text-white">Identidade Neutra e Segura:</strong> Operação isolada
-              por empresa, sem expor dados e sem automações não oficiais arriscadas.
+              <strong className="text-white">Isolamento Multiempresa com RLS:</strong> Segurança em
+              camadas com API Rules no banco de dados e validações ativas de tenant.
             </p>
           </div>
         </div>
@@ -107,7 +100,7 @@ export default function Login() {
                 Acessar Plataforma
               </CardTitle>
               <CardDescription className="text-xs sm:text-sm text-slate-500">
-                Entre com seu e-mail corporativo ou utilize o acesso de demonstração.
+                Entre com seu e-mail corporativo e senha cadastrados.
               </CardDescription>
             </CardHeader>
 
@@ -159,32 +152,6 @@ export default function Login() {
                   {loading ? 'Validando...' : 'Entrar na Central'}
                 </Button>
               </form>
-
-              <div className="relative my-4">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-slate-200" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white px-2 text-slate-400 font-semibold">
-                    ou experimente agora
-                  </span>
-                </div>
-              </div>
-
-              {/* Instant Demo Button */}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleDemoLogin}
-                disabled={loading}
-                className="w-full border-blue-200 bg-blue-50/50 hover:bg-blue-100/70 text-blue-800 font-semibold h-11 flex items-center justify-center gap-2"
-              >
-                <Zap className="w-4 h-4 text-blue-600 fill-blue-600" />
-                <span>Entrar com Conta Demo (1 Clique)</span>
-              </Button>
-              <p className="text-[11px] text-center text-slate-400">
-                Acesso imediato com dados B2B ricos, pipeline pré-configurado e análises de IA.
-              </p>
             </CardContent>
 
             <CardFooter className="bg-slate-50 border-t border-slate-100 py-3 flex items-center justify-between text-xs text-slate-600">

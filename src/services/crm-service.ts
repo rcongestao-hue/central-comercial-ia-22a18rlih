@@ -587,6 +587,40 @@ export const crmService = {
     return true
   },
 
+  // System Health Check
+  async getHealthCheck(): Promise<{
+    status: string
+    pocketbaseConnected: boolean
+    migrationsApplied: boolean
+    realtimeAvailable: boolean
+    authenticated: boolean
+    user: any
+    activeCompany: any
+    activeMembership: any
+    tenantActive: boolean
+    timestamp: string
+  }> {
+    try {
+      if (!import.meta.env.VITE_POCKETBASE_URL) {
+        throw new Error('VITE_POCKETBASE_URL não está configurada no ambiente.')
+      }
+      return await pb.send('/api/health-check', { method: 'GET' })
+    } catch (err: any) {
+      return {
+        status: 'error',
+        pocketbaseConnected: false,
+        migrationsApplied: false,
+        realtimeAvailable: false,
+        authenticated: pb.authStore.isValid,
+        user: pb.authStore.record,
+        activeCompany: null,
+        activeMembership: null,
+        tenantActive: false,
+        timestamp: new Date().toISOString(),
+      }
+    }
+  },
+
   // Invitations
   async getInvitations(companyId: string): Promise<Invitation[]> {
     if (!companyId) return []

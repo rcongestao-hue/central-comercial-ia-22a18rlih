@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
@@ -25,7 +25,7 @@ import {
 } from 'lucide-react'
 
 export default function Onboarding() {
-  const { registerCompanyAndAdmin } = useAuth()
+  const { registerCompanyAndAdmin, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const { toast } = useToast()
   const [step, setStep] = useState<1 | 2>(1)
@@ -51,7 +51,7 @@ export default function Onboarding() {
     if (isAuthenticated) {
       // Allow onboarding to create new workspace, don't force redirect
     }
-  }, [])
+  }, [isAuthenticated])
 
   const handleNextStep = (e: React.FormEvent) => {
     e.preventDefault()

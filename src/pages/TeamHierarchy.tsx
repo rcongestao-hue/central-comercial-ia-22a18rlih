@@ -120,7 +120,7 @@ export default function TeamHierarchy() {
 
       toast({
         title: 'Convite criado com sucesso!',
-        description: `Link de convite gerado para ${invEmail}.`,
+        description: `Link de convite gerado. Copie e envie manualmente ao usuário (${invEmail}).`,
       })
 
       setInviteDialogOpen(false)
@@ -213,7 +213,7 @@ export default function TeamHierarchy() {
     navigator.clipboard.writeText(inviteUrl)
     toast({
       title: 'Link de convite copiado!',
-      description: 'Envie o link para o novo colaborador acessar a plataforma.',
+      description: 'Link de convite gerado. Copie e envie manualmente ao usuário.',
     })
   }
 

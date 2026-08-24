@@ -4,7 +4,8 @@ import { useAuth } from '@/context/AuthContext'
 import { CommercialAccount, PipelineStage, PIPELINE_STAGES } from '@/types'
 import { commercialAiService } from '@/services/ai-service'
 import { formatDatePtBR } from '@/lib/commercial-utils'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { fetchCnpjData, cleanCnpj, formatCnpj, isValidCnpj } from '@/services/cnpj-service'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -29,14 +30,15 @@ import {
   Plus,
   Search,
   Sparkles,
-  ExternalLink,
   MapPin,
-  Globe,
-  Users,
   ChevronRight,
-  Filter,
-  CheckCircle2,
-  Briefcase,
+  Loader2,
+  Phone,
+  Mail,
+  CheckCircle,
+  FileSearch,
+  Building,
+  Hash,
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
@@ -50,52 +52,219 @@ export default function AccountsPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
 
   // New Account Form State
+  const [cnpj, setCnpj] = useState('')
   const [razaoSocial, setRazaoSocial] = useState('')
   const [nomeFantasia, setNomeFantasia] = useState('')
-  const [cnpj, setCnpj] = useState('')
-  const [site, setSite] = useState('')
   const [segmento, setSegmento] = useState('')
-  const [localizacao, setLocalizacao] = useState('')
-  const [endereco, setEndereco] = useState('')
-  const [linkedin, setLinkedin] = useState('')
+  const [cnaePrincipal, setCnaePrincipal] = useState('')
   const [porte, setPorte] = useState<'1-10' | '11-50' | '51-200' | '201-500' | '500+'>('51-200')
+  const [telefone, setTelefone] = useState('')
+  const [email, setEmail] = useState('')
+  const [site, setSite] = useState('')
+  const [linkedin, setLinkedin] = useState('')
+  const [localizacao, setLocalizacao] = useState('')
+  const [cep, setCep] = useState('')
+  const [logradouro, setLogradouro] = useState('')
+  const [numero, setNumero] = useState('')
+  const [complemento, setComplemento] = useState('')
+  const [bairro, setBairro] = useState('')
+  const [cidade, setCidade] = useState('')
+  const [estado, setEstado] = useState('')
+  const [situacaoCadastral, setSituacaoCadastral] = useState('')
   const [observacoes, setObservacoes] = useState('')
   const [proximoPasso, setProximoPasso] = useState('')
+
+  // CNPJ Fetching State
+  const [isFetchingCnpj, setIsFetchingCnpj] = useState(false)
+  const [cnpjAutoFilled, setCnpjAutoFilled] = useState(false)
 
   const accounts = companyData.accounts || []
 
   const filteredAccounts = accounts.filter((acc) => {
+    const q = searchTerm.toLowerCase().trim()
+    const cleanQ = cleanCnpj(searchTerm)
+
     const matchesSearch =
-      acc.razaoSocial.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (acc.nomeFantasia && acc.nomeFantasia.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      acc.segmento.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      acc.localizacao.toLowerCase().includes(searchTerm.toLowerCase())
+      acc.razaoSocial.toLowerCase().includes(q) ||
+      (acc.nomeFantasia && acc.nomeFantasia.toLowerCase().includes(q)) ||
+      acc.segmento.toLowerCase().includes(q) ||
+      acc.localizacao.toLowerCase().includes(q) ||
+      (acc.cnpj && cleanQ && cleanCnpj(acc.cnpj).includes(cleanQ)) ||
+      (acc.cnpj && acc.cnpj.toLowerCase().includes(q))
 
     const matchesStage = selectedStage === 'all' || acc.etapaAtual === selectedStage
     return matchesSearch && matchesStage
   })
 
+  // CNPJ change handler with auto-formatting
+  const handleCnpjChange = (value: string) => {
+    // Permite digitar livremente ou colar formatado
+    const formatted = formatCnpj(value)
+    setCnpj(formatted)
+  }
+
+  // Consulta API Brasil API
+  const handleFetchCnpj = async () => {
+    const cleaned = cleanCnpj(cnpj)
+
+    if (!cleaned) {
+      toast({
+        variant: 'destructive',
+        title: 'Informe um CNPJ',
+        description: 'Digite o CNPJ da empresa antes de buscar os dados.',
+      })
+      return
+    }
+
+    if (cleaned.length !== 14) {
+      toast({
+        variant: 'destructive',
+        title: 'CNPJ incompleto',
+        description: `O CNPJ deve conter 14 dígitos (você digitou ${cleaned.length}).`,
+      })
+      return
+    }
+
+    if (!isValidCnpj(cleaned)) {
+      toast({
+        variant: 'destructive',
+        title: 'Dígitos verificadores inválidos',
+        description: 'O número informado não corresponde a um CNPJ válido da Receita Federal.',
+      })
+      // Não bloqueia a requisição caso o usuário queira tentar, mas avisa
+    }
+
+    setIsFetchingCnpj(true)
+    try {
+      const data = await fetchCnpjData(cleaned)
+
+      // Preenche os campos automaticamente mantendo-os editáveis
+      setCnpj(data.cnpjFormatted)
+      setRazaoSocial(data.razaoSocial)
+      setNomeFantasia(data.nomeFantasia)
+      setSegmento(data.cnaeDescricao || 'B2B Geral')
+      if (data.cnaeDescricao) {
+        setCnaePrincipal(
+          data.cnaeCodigo ? `${data.cnaeCodigo} - ${data.cnaeDescricao}` : data.cnaeDescricao,
+        )
+      }
+      if (data.porteSugestao) {
+        setPorte(data.porteSugestao)
+      }
+      if (data.telefone) {
+        setTelefone(data.telefone)
+      }
+      if (data.email) {
+        setEmail(data.email)
+      }
+      if (data.cep) {
+        setCep(data.cep)
+      }
+      if (data.logradouro) {
+        setLogradouro(data.logradouro)
+      }
+      if (data.numero) {
+        setNumero(data.numero)
+      }
+      if (data.complemento) {
+        setComplemento(data.complemento)
+      }
+      if (data.bairro) {
+        setBairro(data.bairro)
+      }
+      if (data.municipio) {
+        setCidade(data.municipio)
+      }
+      if (data.uf) {
+        setEstado(data.uf)
+      }
+      if (data.localizacao) {
+        setLocalizacao(data.localizacao)
+      }
+      if (data.situacaoCadastral) {
+        setSituacaoCadastral(data.situacaoCadastral)
+      }
+
+      setCnpjAutoFilled(true)
+      toast({
+        title: 'Dados da empresa importados!',
+        description: `${data.razaoSocial} encontrada com sucesso via Brasil API. Você pode revisar e editar os campos.`,
+      })
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao consultar CNPJ',
+        description:
+          err?.message || 'Não foi possível consultar os dados da empresa. Tente novamente.',
+      })
+    } finally {
+      setIsFetchingCnpj(false)
+    }
+  }
+
+  // Formata o endereço consolidado
+  const buildFullAddress = () => {
+    const parts: string[] = []
+    if (logradouro) {
+      parts.push(numero ? `${logradouro}, ${numero}` : logradouro)
+    }
+    if (complemento) {
+      parts.push(complemento)
+    }
+    if (bairro) {
+      parts.push(`Bairro ${bairro}`)
+    }
+    if (cep) {
+      parts.push(`CEP ${cep}`)
+    }
+    return parts.join(' - ')
+  }
+
   const handleCreateAccount = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!razaoSocial.trim() || !currentCompany) return
+    if (!razaoSocial.trim() || !currentCompany) {
+      toast({
+        variant: 'destructive',
+        title: 'Campo obrigatório',
+        description: 'A Razão Social é obrigatória para cadastrar a conta.',
+      })
+      return
+    }
+
+    const calculatedLocalizacao =
+      localizacao.trim() ||
+      (cidade && estado ? `${cidade}, ${estado}` : cidade || estado || 'Brasil')
+
+    const calculatedEndereco = buildFullAddress()
 
     const newAccId = `acc_${Date.now()}`
     const newAccount: CommercialAccount = {
       id: newAccId,
       empresaId: currentCompany.id,
-      razaoSocial,
-      nomeFantasia: nomeFantasia || razaoSocial,
-      cnpj: cnpj || undefined,
-      site: site || undefined,
-      segmento: segmento || 'B2B Geral',
-      localizacao: localizacao || 'Brasil',
-      endereco: endereco || undefined,
-      linkedinInstitucional: linkedin || undefined,
+      razaoSocial: razaoSocial.trim(),
+      nomeFantasia: (nomeFantasia || razaoSocial).trim(),
+      cnpj: cnpj ? formatCnpj(cnpj) : undefined,
+      site: site.trim() || undefined,
+      segmento: segmento.trim() || 'B2B Geral',
+      localizacao: calculatedLocalizacao,
+      endereco: calculatedEndereco || undefined,
+      logradouro: logradouro.trim() || undefined,
+      numero: numero.trim() || undefined,
+      complemento: complemento.trim() || undefined,
+      bairro: bairro.trim() || undefined,
+      cidade: cidade.trim() || undefined,
+      estado: estado.trim() || undefined,
+      cep: cep.trim() || undefined,
+      cnaePrincipal: cnaePrincipal.trim() || undefined,
+      telefone: telefone.trim() || undefined,
+      email: email.trim() || undefined,
+      situacaoCadastral: situacaoCadastral || undefined,
+      linkedinInstitucional: linkedin.trim() || undefined,
       responsavelComercialId: currentUser?.id || 'usr_exec_1',
       etapaAtual: 'conta_identificada',
       porte,
-      observacoes,
-      proximoPasso: proximoPasso || 'Realizar qualificação inicial e identificar decisores',
+      observacoes: observacoes.trim() || undefined,
+      proximoPasso: proximoPasso.trim() || 'Realizar qualificação inicial e identificar decisores',
       criadoEm: new Date().toISOString(),
       atualizadoEm: new Date().toISOString(),
     }
@@ -117,7 +286,9 @@ export default function AccountsPage() {
           contaId: newAccId,
           tipo: 'conta_criada',
           titulo: 'Conta Comercial Cadastrada',
-          descricao: `${newAccount.razaoSocial} foi adicionada à carteira de prospecção.`,
+          descricao: `${newAccount.razaoSocial} foi adicionada à carteira de prospecção${
+            newAccount.cnpj ? ` (CNPJ: ${newAccount.cnpj})` : ''
+          }.`,
           origem: 'usuario',
           criadoPorUsuarioId: currentUser?.id,
           criadoPorNome: currentUser?.nome,
@@ -148,16 +319,28 @@ export default function AccountsPage() {
   }
 
   const resetForm = () => {
+    setCnpj('')
     setRazaoSocial('')
     setNomeFantasia('')
-    setCnpj('')
-    setSite('')
     setSegmento('')
-    setLocalizacao('')
-    setEndereco('')
+    setCnaePrincipal('')
+    setPorte('51-200')
+    setTelefone('')
+    setEmail('')
+    setSite('')
     setLinkedin('')
+    setLocalizacao('')
+    setCep('')
+    setLogradouro('')
+    setNumero('')
+    setComplemento('')
+    setBairro('')
+    setCidade('')
+    setEstado('')
+    setSituacaoCadastral('')
     setObservacoes('')
     setProximoPasso('')
+    setCnpjAutoFilled(false)
   }
 
   const getStageBadge = (stage: PipelineStage) => {
@@ -179,12 +362,16 @@ export default function AccountsPage() {
             <span>Contas Comerciais</span>
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            Empresas-alvo mapeadas para abordagem, negociação e expansão comercial.
+            Empresas-alvo mapeadas com busca automática por CNPJ, enriquecimento de dados e IA de
+            prospecção.
           </p>
         </div>
 
         <Button
-          onClick={() => setDialogOpen(true)}
+          onClick={() => {
+            resetForm()
+            setDialogOpen(true)
+          }}
           className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 shadow-sm shrink-0"
         >
           <Plus className="w-4 h-4" />
@@ -198,7 +385,7 @@ export default function AccountsPage() {
           <div className="relative flex-1 w-full">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <Input
-              placeholder="Buscar por razão social, nome fantasia, segmento ou cidade..."
+              placeholder="Buscar por razão social, nome fantasia, CNPJ, segmento ou cidade..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9 h-10 text-sm border-slate-300"
@@ -244,9 +431,15 @@ export default function AccountsPage() {
           <p className="text-xs text-slate-500 max-w-md mx-auto mt-1 mb-4">
             {searchTerm || selectedStage !== 'all'
               ? 'Tente ajustar os filtros de busca para encontrar as empresas cadastradas.'
-              : 'Cadastre sua primeira empresa-alvo para iniciar a qualificação com IA e prospecção assistida.'}
+              : 'Cadastre sua primeira empresa-alvo buscando automaticamente pelo CNPJ para iniciar a qualificação com IA.'}
           </p>
-          <Button onClick={() => setDialogOpen(true)} className="bg-blue-600 text-white text-xs">
+          <Button
+            onClick={() => {
+              resetForm()
+              setDialogOpen(true)
+            }}
+            className="bg-blue-600 text-white text-xs"
+          >
             + Cadastrar Conta Agora
           </Button>
         </Card>
@@ -271,6 +464,11 @@ export default function AccountsPage() {
                       <p className="text-xs text-slate-500 truncate mt-0.5">
                         {account.razaoSocial}
                       </p>
+                      {account.cnpj && (
+                        <p className="text-[11px] font-mono text-slate-400 truncate mt-0.5">
+                          CNPJ: {account.cnpj}
+                        </p>
+                      )}
                     </div>
                     {hasIa && (
                       <Badge
@@ -304,6 +502,12 @@ export default function AccountsPage() {
                       <MapPin className="w-3.5 h-3.5 shrink-0" />
                       <span className="truncate">{account.localizacao}</span>
                     </div>
+                    {account.telefone && (
+                      <div className="flex items-center gap-1.5 text-slate-500 truncate">
+                        <Phone className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">{account.telefone}</span>
+                      </div>
+                    )}
                     {account.proximoPasso && (
                       <div className="p-2 rounded bg-slate-50 border border-slate-100 text-[11px] mt-2 text-slate-700">
                         <strong className="text-slate-900 block mb-0.5">Próximo Passo:</strong>
@@ -327,161 +531,382 @@ export default function AccountsPage() {
 
       {/* Cadastrar Nova Conta Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Cadastrar Nova Conta Comercial</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-blue-600" />
+              <span>Cadastrar Nova Conta Comercial</span>
+            </DialogTitle>
             <DialogDescription>
-              Insira os dados da empresa-alvo. A IA analisará a aderência ao ICP e preparará
-              perguntas de abordagem.
+              Informe o CNPJ para preencher os dados cadastrais automaticamente via Brasil API ou
+              digite manualmente.
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleCreateAccount} className="space-y-4 pt-2">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label htmlFor="razao" className="text-xs font-semibold">
-                  Razão Social *
-                </Label>
+          {/* Seção de Busca por CNPJ em destaque */}
+          <div className="p-4 rounded-xl bg-gradient-to-r from-blue-50/80 to-indigo-50/60 border border-blue-200/80 space-y-2">
+            <Label
+              htmlFor="cnpj-search"
+              className="text-xs font-bold text-blue-950 flex items-center gap-1.5"
+            >
+              <FileSearch className="w-4 h-4 text-blue-600" />
+              <span>Preenchimento Automático por CNPJ (Brasil API)</span>
+            </Label>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div className="relative flex-1">
+                <Hash className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <Input
-                  id="razao"
-                  placeholder="Ex: Sigma Distribuidora S.A."
-                  value={razaoSocial}
-                  onChange={(e) => setRazaoSocial(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-1">
-                <Label htmlFor="fantasia" className="text-xs font-semibold">
-                  Nome Fantasia
-                </Label>
-                <Input
-                  id="fantasia"
-                  placeholder="Ex: Sigma Brasil"
-                  value={nomeFantasia}
-                  onChange={(e) => setNomeFantasia(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="space-y-1">
-                <Label htmlFor="cnpj" className="text-xs font-semibold">
-                  CNPJ (opcional)
-                </Label>
-                <Input
-                  id="cnpj"
-                  placeholder="00.000.000/0000-00"
+                  id="cnpj-search"
+                  placeholder="00.000.000/0000-00 ou apenas dígitos"
                   value={cnpj}
-                  onChange={(e) => setCnpj(e.target.value)}
+                  onChange={(e) => handleCnpjChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      handleFetchCnpj()
+                    }
+                  }}
+                  className="pl-9 h-10 bg-white border-blue-300 font-mono text-sm focus:border-blue-500"
                 />
               </div>
+              <Button
+                type="button"
+                onClick={handleFetchCnpj}
+                disabled={isFetchingCnpj}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold h-10 px-4 shrink-0 shadow-sm"
+              >
+                {isFetchingCnpj ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <span>Consultando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Search className="w-4 h-4 mr-2" />
+                    <span>Buscar dados</span>
+                  </>
+                )}
+              </Button>
+            </div>
 
+            {cnpjAutoFilled && (
+              <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-medium pt-1">
+                <CheckCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>
+                  Dados carregados da Receita Federal! Você pode revisar ou editar qualquer campo
+                  abaixo.
+                </span>
+              </div>
+            )}
+            <p className="text-[11px] text-slate-500">
+              Dica: cole o CNPJ formatado ou não. Buscaremos razão social, nome fantasia, endereço
+              completo, CNAE principal, telefone e e-mail.
+            </p>
+          </div>
+
+          <form onSubmit={handleCreateAccount} className="space-y-4 pt-1">
+            {/* Bloco 1: Identificação */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                <Building className="w-3.5 h-3.5 text-slate-500" />
+                <span>Dados da Empresa</span>
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="razao" className="text-xs font-semibold">
+                    Razão Social *
+                  </Label>
+                  <Input
+                    id="razao"
+                    placeholder="Ex: Sigma Distribuidora S.A."
+                    value={razaoSocial}
+                    onChange={(e) => setRazaoSocial(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="fantasia" className="text-xs font-semibold">
+                    Nome Fantasia
+                  </Label>
+                  <Input
+                    id="fantasia"
+                    placeholder="Ex: Sigma Brasil"
+                    value={nomeFantasia}
+                    onChange={(e) => setNomeFantasia(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="seg" className="text-xs font-semibold">
+                    Segmento de Mercado / CNAE *
+                  </Label>
+                  <Input
+                    id="seg"
+                    placeholder="Ex: Logística, Saúde, Varejo"
+                    value={segmento}
+                    onChange={(e) => setSegmento(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="porte" className="text-xs font-semibold">
+                    Porte Estimado
+                  </Label>
+                  <Select value={porte} onValueChange={(val: any) => setPorte(val)}>
+                    <SelectTrigger id="porte" className="text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1-10">1 a 10 pessoas</SelectItem>
+                      <SelectItem value="11-50">11 a 50 pessoas</SelectItem>
+                      <SelectItem value="51-200">51 a 200 pessoas</SelectItem>
+                      <SelectItem value="201-500">201 a 500 pessoas</SelectItem>
+                      <SelectItem value="500+">500+ pessoas</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="situacao" className="text-xs font-semibold">
+                    Situação Cadastral
+                  </Label>
+                  <Input
+                    id="situacao"
+                    placeholder="Ex: ATIVA"
+                    value={situacaoCadastral}
+                    onChange={(e) => setSituacaoCadastral(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {cnaePrincipal && (
+                <div className="space-y-1">
+                  <Label htmlFor="cnae-desc" className="text-xs font-semibold">
+                    CNAE Principal Completo (Receita Federal)
+                  </Label>
+                  <Input
+                    id="cnae-desc"
+                    value={cnaePrincipal}
+                    onChange={(e) => setCnaePrincipal(e.target.value)}
+                    className="text-xs bg-slate-50"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Bloco 2: Endereço Detalhado */}
+            <div className="space-y-3 pt-2 border-t border-slate-100">
+              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-slate-500" />
+                <span>Endereço & Localização</span>
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2 space-y-1">
+                  <Label htmlFor="logradouro" className="text-xs font-semibold">
+                    Logradouro (Rua, Av, etc.)
+                  </Label>
+                  <Input
+                    id="logradouro"
+                    placeholder="Ex: Av. Paulista"
+                    value={logradouro}
+                    onChange={(e) => setLogradouro(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="num" className="text-xs font-semibold">
+                    Número
+                  </Label>
+                  <Input
+                    id="num"
+                    placeholder="Ex: 1000"
+                    value={numero}
+                    onChange={(e) => setNumero(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="comp" className="text-xs font-semibold">
+                    Complemento
+                  </Label>
+                  <Input
+                    id="comp"
+                    placeholder="Ex: Sala 42, Bloco B"
+                    value={complemento}
+                    onChange={(e) => setComplemento(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="bairro" className="text-xs font-semibold">
+                    Bairro
+                  </Label>
+                  <Input
+                    id="bairro"
+                    placeholder="Ex: Bela Vista"
+                    value={bairro}
+                    onChange={(e) => setBairro(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="cidade" className="text-xs font-semibold">
+                    Cidade *
+                  </Label>
+                  <Input
+                    id="cidade"
+                    placeholder="Ex: São Paulo"
+                    value={cidade}
+                    onChange={(e) => {
+                      setCidade(e.target.value)
+                      if (!localizacao || localizacao === `${cidade}, ${estado}`) {
+                        setLocalizacao(estado ? `${e.target.value}, ${estado}` : e.target.value)
+                      }
+                    }}
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="estado" className="text-xs font-semibold">
+                      UF *
+                    </Label>
+                    <Input
+                      id="estado"
+                      placeholder="SP"
+                      maxLength={2}
+                      value={estado}
+                      onChange={(e) => {
+                        const val = e.target.value.toUpperCase()
+                        setEstado(val)
+                        if (!localizacao || localizacao === `${cidade}, ${estado}`) {
+                          setLocalizacao(cidade ? `${cidade}, ${val}` : val)
+                        }
+                      }}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="cep" className="text-xs font-semibold">
+                      CEP
+                    </Label>
+                    <Input
+                      id="cep"
+                      placeholder="00000-000"
+                      value={cep}
+                      onChange={(e) => setCep(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bloco 3: Contatos & Canais Oficiais */}
+            <div className="space-y-3 pt-2 border-t border-slate-100">
+              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                <Phone className="w-3.5 h-3.5 text-slate-500" />
+                <span>Canais de Contato & Presença Digital</span>
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="tel" className="text-xs font-semibold flex items-center gap-1">
+                    <Phone className="w-3 h-3 text-slate-400" />
+                    Telefone Institucional
+                  </Label>
+                  <Input
+                    id="tel"
+                    placeholder="Ex: (11) 3456-7890"
+                    value={telefone}
+                    onChange={(e) => setTelefone(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="email" className="text-xs font-semibold flex items-center gap-1">
+                    <Mail className="w-3 h-3 text-slate-400" />
+                    E-mail Institucional
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="contato@empresa.com.br"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="site" className="text-xs font-semibold">
+                    Website Oficial
+                  </Label>
+                  <Input
+                    id="site"
+                    placeholder="https://empresa.com.br"
+                    value={site}
+                    onChange={(e) => setSite(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="linkedin" className="text-xs font-semibold">
+                    LinkedIn Institucional
+                  </Label>
+                  <Input
+                    id="linkedin"
+                    placeholder="https://linkedin.com/company/empresa"
+                    value={linkedin}
+                    onChange={(e) => setLinkedin(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Bloco 4: Estratégia Comercial */}
+            <div className="space-y-3 pt-2 border-t border-slate-100">
               <div className="space-y-1">
-                <Label htmlFor="seg" className="text-xs font-semibold">
-                  Segmento de Mercado *
+                <Label htmlFor="proximo" className="text-xs font-semibold">
+                  Próximo Passo Comercial Imediato
                 </Label>
                 <Input
-                  id="seg"
-                  placeholder="Ex: Logística, Saúde, Varejo"
-                  value={segmento}
-                  onChange={(e) => setSegmento(e.target.value)}
-                  required
+                  id="proximo"
+                  placeholder="Ex: Identificar Diretor de Operações e preparar abordagem WhatsApp"
+                  value={proximoPasso}
+                  onChange={(e) => setProximoPasso(e.target.value)}
                 />
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="porte" className="text-xs font-semibold">
-                  Porte (Colaboradores)
+                <Label htmlFor="obs" className="text-xs font-semibold">
+                  Observações / Contexto da Conta
                 </Label>
-                <Select value={porte} onValueChange={(val: any) => setPorte(val)}>
-                  <SelectTrigger id="porte" className="text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1-10">1 a 10 pessoas</SelectItem>
-                    <SelectItem value="11-50">11 a 50 pessoas</SelectItem>
-                    <SelectItem value="51-200">51 a 200 pessoas</SelectItem>
-                    <SelectItem value="201-500">201 a 500 pessoas</SelectItem>
-                    <SelectItem value="500+">500+ pessoas</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label htmlFor="cidade" className="text-xs font-semibold">
-                  Localização (Cidade/UF) *
-                </Label>
-                <Input
-                  id="cidade"
-                  placeholder="Ex: Curitiba, PR"
-                  value={localizacao}
-                  onChange={(e) => setLocalizacao(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-1">
-                <Label htmlFor="site" className="text-xs font-semibold">
-                  Website Oficial
-                </Label>
-                <Input
-                  id="site"
-                  placeholder="https://empresa.com.br"
-                  value={site}
-                  onChange={(e) => setSite(e.target.value)}
+                <Textarea
+                  id="obs"
+                  placeholder="Contexto relevante sobre o momento da empresa, contatos prévios..."
+                  value={observacoes}
+                  onChange={(e) => setObservacoes(e.target.value)}
+                  rows={2}
                 />
               </div>
             </div>
 
-            <div className="space-y-1">
-              <Label htmlFor="linkedin" className="text-xs font-semibold">
-                LinkedIn Institucional
-              </Label>
-              <Input
-                id="linkedin"
-                placeholder="https://linkedin.com/company/empresa"
-                value={linkedin}
-                onChange={(e) => setLinkedin(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="proximo" className="text-xs font-semibold">
-                Próximo Passo Comercial Imediato
-              </Label>
-              <Input
-                id="proximo"
-                placeholder="Ex: Identificar Diretor de Operações e preparar abordagem WhatsApp"
-                value={proximoPasso}
-                onChange={(e) => setProximoPasso(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="obs" className="text-xs font-semibold">
-                Observações / Contexto da Conta
-              </Label>
-              <Textarea
-                id="obs"
-                placeholder="Contexto relevante sobre o momento da empresa, contatos prévios..."
-                value={observacoes}
-                onChange={(e) => setObservacoes(e.target.value)}
-                rows={2}
-              />
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2">
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                 Cancelar
               </Button>
               <Button
                 type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold flex items-center gap-2"
               >
-                Salvar e Analisar com IA
+                <Sparkles className="w-4 h-4" />
+                <span>Salvar e Analisar com IA</span>
               </Button>
             </div>
           </form>

@@ -155,6 +155,17 @@ export interface CommercialAccount {
   segmento: string
   localizacao: string
   endereco?: string
+  logradouro?: string
+  numero?: string
+  complemento?: string
+  bairro?: string
+  cidade?: string
+  estado?: string
+  cep?: string
+  cnaePrincipal?: string
+  telefone?: string
+  email?: string
+  situacaoCadastral?: string
   linkedinInstitucional?: string
   responsavelComercialId: string
   etapaAtual: PipelineStage

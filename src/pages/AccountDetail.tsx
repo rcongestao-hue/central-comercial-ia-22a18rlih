@@ -11,7 +11,9 @@ import {
   Contact,
   Opportunity,
   Meeting,
+  CommercialAccount,
 } from '@/types'
+import { fetchCnpjData, cleanCnpj, formatCnpj, isValidCnpj } from '@/services/cnpj-service'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -44,15 +46,20 @@ import {
   MessageSquare,
   Mail,
   Phone,
-  Share2,
   Plus,
   Clock,
   CheckCircle2,
   HelpCircle,
   ExternalLink,
   Edit,
-  FileText,
   AlertCircle,
+  MapPin,
+  Search,
+  Loader2,
+  FileSearch,
+  Building,
+  Hash,
+  Globe,
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
@@ -66,8 +73,35 @@ export default function AccountDetail() {
   const contacts = companyData.contacts.filter((c) => c.contaId === id)
   const opportunities = companyData.opportunities.filter((o) => o.contaId === id)
   const meetings = companyData.meetings.filter((m) => m.contaId === id)
-  const activities = companyData.activities.filter((a) => a.contaId === id)
   const timeline = companyData.timeline.filter((t) => t.contaId === id)
+
+  // Edit Account Dialog
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [editCnpj, setEditCnpj] = useState(account?.cnpj || '')
+  const [editRazaoSocial, setEditRazaoSocial] = useState(account?.razaoSocial || '')
+  const [editNomeFantasia, setEditNomeFantasia] = useState(account?.nomeFantasia || '')
+  const [editSegmento, setEditSegmento] = useState(account?.segmento || '')
+  const [editCnaePrincipal, setEditCnaePrincipal] = useState(account?.cnaePrincipal || '')
+  const [editPorte, setEditPorte] = useState<'1-10' | '11-50' | '51-200' | '201-500' | '500+'>(
+    account?.porte || '51-200',
+  )
+  const [editTelefone, setEditTelefone] = useState(account?.telefone || '')
+  const [editEmail, setEditEmail] = useState(account?.email || '')
+  const [editSite, setEditSite] = useState(account?.site || '')
+  const [editLinkedin, setEditLinkedin] = useState(account?.linkedinInstitucional || '')
+  const [editLocalizacao, setEditLocalizacao] = useState(account?.localizacao || '')
+  const [editCep, setEditCep] = useState(account?.cep || '')
+  const [editLogradouro, setEditLogradouro] = useState(account?.logradouro || '')
+  const [editNumero, setEditNumero] = useState(account?.numero || '')
+  const [editComplemento, setEditComplemento] = useState(account?.complemento || '')
+  const [editBairro, setEditBairro] = useState(account?.bairro || '')
+  const [editCidade, setEditCidade] = useState(account?.cidade || '')
+  const [editEstado, setEditEstado] = useState(account?.estado || '')
+  const [editSituacaoCadastral, setEditSituacaoCadastral] = useState(
+    account?.situacaoCadastral || '',
+  )
+  const [editObservacoes, setEditObservacoes] = useState(account?.observacoes || '')
+  const [isFetchingCnpj, setIsFetchingCnpj] = useState(false)
 
   // Contact Dialog
   const [contactDialogOpen, setContactDialogOpen] = useState(false)
@@ -112,6 +146,212 @@ export default function AccountDetail() {
         </Button>
       </div>
     )
+  }
+
+  // Populate edit dialog form
+  const handleOpenEditDialog = () => {
+    setEditCnpj(account.cnpj || '')
+    setEditRazaoSocial(account.razaoSocial || '')
+    setEditNomeFantasia(account.nomeFantasia || '')
+    setEditSegmento(account.segmento || '')
+    setEditCnaePrincipal(account.cnaePrincipal || '')
+    setEditPorte(account.porte || '51-200')
+    setEditTelefone(account.telefone || '')
+    setEditEmail(account.email || '')
+    setEditSite(account.site || '')
+    setEditLinkedin(account.linkedinInstitucional || '')
+    setEditLocalizacao(account.localizacao || '')
+    setEditCep(account.cep || '')
+    setEditLogradouro(account.logradouro || '')
+    setEditNumero(account.numero || '')
+    setEditComplemento(account.complemento || '')
+    setEditBairro(account.bairro || '')
+    setEditCidade(account.cidade || '')
+    setEditEstado(account.estado || '')
+    setEditSituacaoCadastral(account.situacaoCadastral || '')
+    setEditObservacoes(account.observacoes || '')
+    setEditDialogOpen(true)
+  }
+
+  const handleEditFetchCnpj = async () => {
+    const cleaned = cleanCnpj(editCnpj)
+
+    if (!cleaned) {
+      toast({
+        variant: 'destructive',
+        title: 'Informe um CNPJ',
+        description: 'Digite o CNPJ antes de buscar os dados.',
+      })
+      return
+    }
+
+    if (cleaned.length !== 14) {
+      toast({
+        variant: 'destructive',
+        title: 'CNPJ incompleto',
+        description: `O CNPJ deve conter 14 dígitos (você digitou ${cleaned.length}).`,
+      })
+      return
+    }
+
+    if (!isValidCnpj(cleaned)) {
+      toast({
+        variant: 'destructive',
+        title: 'Dígitos verificadores inválidos',
+        description: 'O número informado pode não ser um CNPJ válido na Receita Federal.',
+      })
+    }
+
+    setIsFetchingCnpj(true)
+    try {
+      const data = await fetchCnpjData(cleaned)
+
+      setEditCnpj(data.cnpjFormatted)
+      setEditRazaoSocial(data.razaoSocial)
+      setEditNomeFantasia(data.nomeFantasia)
+      setEditSegmento(data.cnaeDescricao || 'B2B Geral')
+      if (data.cnaeDescricao) {
+        setEditCnaePrincipal(
+          data.cnaeCodigo ? `${data.cnaeCodigo} - ${data.cnaeDescricao}` : data.cnaeDescricao,
+        )
+      }
+      if (data.porteSugestao) {
+        setEditPorte(data.porteSugestao)
+      }
+      if (data.telefone) {
+        setEditTelefone(data.telefone)
+      }
+      if (data.email) {
+        setEditEmail(data.email)
+      }
+      if (data.cep) {
+        setEditCep(data.cep)
+      }
+      if (data.logradouro) {
+        setEditLogradouro(data.logradouro)
+      }
+      if (data.numero) {
+        setEditNumero(data.numero)
+      }
+      if (data.complemento) {
+        setEditComplemento(data.complemento)
+      }
+      if (data.bairro) {
+        setEditBairro(data.bairro)
+      }
+      if (data.municipio) {
+        setEditCidade(data.municipio)
+      }
+      if (data.uf) {
+        setEditEstado(data.uf)
+      }
+      if (data.localizacao) {
+        setEditLocalizacao(data.localizacao)
+      }
+      if (data.situacaoCadastral) {
+        setEditSituacaoCadastral(data.situacaoCadastral)
+      }
+
+      toast({
+        title: 'Dados da empresa importados!',
+        description: `${data.razaoSocial} encontrada com sucesso via Brasil API.`,
+      })
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao consultar CNPJ',
+        description: err?.message || 'Não foi possível consultar os dados da empresa.',
+      })
+    } finally {
+      setIsFetchingCnpj(false)
+    }
+  }
+
+  const handleSaveAccountEdit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editRazaoSocial.trim() || !currentCompany) return
+
+    const parts: string[] = []
+    if (editLogradouro) {
+      parts.push(editNumero ? `${editLogradouro}, ${editNumero}` : editLogradouro)
+    }
+    if (editComplemento) {
+      parts.push(editComplemento)
+    }
+    if (editBairro) {
+      parts.push(`Bairro ${editBairro}`)
+    }
+    if (editCep) {
+      parts.push(`CEP ${editCep}`)
+    }
+    const calculatedEndereco = parts.join(' - ')
+
+    const calculatedLocalizacao =
+      editLocalizacao.trim() ||
+      (editCidade && editEstado
+        ? `${editCidade}, ${editEstado}`
+        : editCidade || editEstado || 'Brasil')
+
+    const updatedAccount: CommercialAccount = {
+      ...account,
+      razaoSocial: editRazaoSocial.trim(),
+      nomeFantasia: (editNomeFantasia || editRazaoSocial).trim(),
+      cnpj: editCnpj ? formatCnpj(editCnpj) : undefined,
+      segmento: editSegmento.trim() || 'B2B Geral',
+      cnaePrincipal: editCnaePrincipal.trim() || undefined,
+      porte: editPorte,
+      telefone: editTelefone.trim() || undefined,
+      email: editEmail.trim() || undefined,
+      site: editSite.trim() || undefined,
+      linkedinInstitucional: editLinkedin.trim() || undefined,
+      localizacao: calculatedLocalizacao,
+      endereco: calculatedEndereco || account.endereco || undefined,
+      logradouro: editLogradouro.trim() || undefined,
+      numero: editNumero.trim() || undefined,
+      complemento: editComplemento.trim() || undefined,
+      bairro: editBairro.trim() || undefined,
+      cidade: editCidade.trim() || undefined,
+      estado: editEstado.trim() || undefined,
+      cep: editCep.trim() || undefined,
+      situacaoCadastral: editSituacaoCadastral.trim() || undefined,
+      observacoes: editObservacoes.trim() || undefined,
+      atualizadoEm: new Date().toISOString(),
+    }
+
+    // Re-qualify with updated data
+    const iaQual = commercialAiService.qualifyAccount(updatedAccount, currentCompany)
+    updatedAccount.iaAnalysis = {
+      ...iaQual,
+      geradoEm: new Date().toISOString(),
+    }
+
+    updateCompanyData((prev) => ({
+      ...prev,
+      accounts: prev.accounts.map((a) => (a.id === account.id ? updatedAccount : a)),
+      timeline: [
+        {
+          id: `tl_${Date.now()}`,
+          empresaId: currentCompany.id,
+          contaId: account.id,
+          tipo: 'oportunidade_atualizada',
+          titulo: 'Dados Cadastrais da Conta Atualizados',
+          descricao: `Informações de ${updatedAccount.razaoSocial} atualizadas por ${
+            currentUser?.nome || 'Usuário'
+          }${updatedAccount.cnpj ? ` (CNPJ: ${updatedAccount.cnpj})` : ''}.`,
+          origem: 'usuario',
+          criadoPorUsuarioId: currentUser?.id,
+          criadoPorNome: currentUser?.nome,
+          criadoEm: new Date().toISOString(),
+        },
+        ...prev.timeline,
+      ],
+    }))
+
+    toast({
+      title: 'Conta comercial atualizada!',
+      description: 'Os dados foram salvos e a análise de IA foi re-executada.',
+    })
+    setEditDialogOpen(false)
   }
 
   const handleReQualifyWithAi = () => {
@@ -382,6 +622,18 @@ export default function AccountDetail() {
                     CNPJ {account.cnpj}
                   </Badge>
                 )}
+                {account.situacaoCadastral && (
+                  <Badge
+                    variant="outline"
+                    className={`text-[10px] font-bold ${
+                      account.situacaoCadastral.toUpperCase() === 'ATIVA'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : 'bg-amber-50 text-amber-700 border-amber-200'
+                    }`}
+                  >
+                    {account.situacaoCadastral}
+                  </Badge>
+                )}
                 {account.iaAnalysis && (
                   <Badge
                     className={`text-xs ${
@@ -403,6 +655,14 @@ export default function AccountDetail() {
 
           {/* Quick Actions */}
           <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={handleOpenEditDialog}
+              className="text-xs border-slate-300 text-slate-700 flex items-center gap-1.5"
+            >
+              <Edit className="w-3.5 h-3.5" />
+              <span>Editar Dados / CNPJ</span>
+            </Button>
             <Button
               onClick={() => navigate(`/prospeccao?contaId=${account.id}`)}
               className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 shadow-sm text-xs"
@@ -426,6 +686,77 @@ export default function AccountDetail() {
               <KanbanSquare className="w-3.5 h-3.5" />
               <span>+ Oportunidade</span>
             </Button>
+          </div>
+        </div>
+
+        {/* Informações Cadastrais Rápidas */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 border-t border-slate-100 text-xs">
+          <div className="flex items-start gap-2 text-slate-600">
+            <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              <span className="font-semibold text-slate-800 block">Endereço / Sede</span>
+              <span className="text-slate-500 text-[11px] truncate block">
+                {account.endereco || account.localizacao || 'Não informado'}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-2 text-slate-600">
+            <Phone className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              <span className="font-semibold text-slate-800 block">Telefone</span>
+              <span className="text-slate-500 text-[11px] block">
+                {account.telefone || 'Não informado'}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-2 text-slate-600">
+            <Mail className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              <span className="font-semibold text-slate-800 block">E-mail Corporativo</span>
+              <span className="text-slate-500 text-[11px] truncate block">
+                {account.email || 'Não informado'}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-2 text-slate-600">
+            <Globe className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              <span className="font-semibold text-slate-800 block">Web / LinkedIn</span>
+              <div className="flex items-center gap-2 text-[11px] text-blue-600">
+                {account.site && (
+                  <a
+                    href={
+                      account.site.startsWith('http') ? account.site : `https://${account.site}`
+                    }
+                    target="_blank"
+                    rel="noreferrer"
+                    className="hover:underline flex items-center gap-0.5"
+                  >
+                    Site <ExternalLink className="w-2.5 h-2.5" />
+                  </a>
+                )}
+                {account.linkedinInstitucional && (
+                  <a
+                    href={
+                      account.linkedinInstitucional.startsWith('http')
+                        ? account.linkedinInstitucional
+                        : `https://${account.linkedinInstitucional}`
+                    }
+                    target="_blank"
+                    rel="noreferrer"
+                    className="hover:underline flex items-center gap-0.5"
+                  >
+                    LinkedIn <ExternalLink className="w-2.5 h-2.5" />
+                  </a>
+                )}
+                {!account.site && !account.linkedinInstitucional && (
+                  <span className="text-slate-400">Não informado</span>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -586,9 +917,11 @@ export default function AccountDetail() {
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                       Informações Cadastradas & Confirmadas:
                     </span>
-                    <p className="text-slate-600">
+                    <p className="text-slate-600 leading-relaxed">
                       Segmento: {account.segmento} • Sede: {account.localizacao} • Porte:{' '}
                       {account.porte || 'Não informado'} colaboradores.
+                      {account.cnpj && <> • CNPJ: {account.cnpj}</>}
+                      {account.cnaePrincipal && <> • CNAE: {account.cnaePrincipal}</>}
                     </p>
                   </div>
 
@@ -854,6 +1187,345 @@ export default function AccountDetail() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* DIALOG: EDITAR CONTA COM BUSCA CNPJ */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-blue-600" />
+              <span>Editar Dados da Conta Comercial</span>
+            </DialogTitle>
+            <DialogDescription>
+              Atualize as informações cadastrais. Você pode consultar novamente o CNPJ via Brasil
+              API para recarregar dados.
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* CNPJ Search Banner */}
+          <div className="p-4 rounded-xl bg-gradient-to-r from-blue-50/80 to-indigo-50/60 border border-blue-200/80 space-y-2">
+            <Label
+              htmlFor="edit-cnpj-search"
+              className="text-xs font-bold text-blue-950 flex items-center gap-1.5"
+            >
+              <FileSearch className="w-4 h-4 text-blue-600" />
+              <span>Consultar / Atualizar via CNPJ (Brasil API)</span>
+            </Label>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div className="relative flex-1">
+                <Hash className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Input
+                  id="edit-cnpj-search"
+                  placeholder="00.000.000/0000-00 ou apenas dígitos"
+                  value={editCnpj}
+                  onChange={(e) => setEditCnpj(formatCnpj(e.target.value))}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      handleEditFetchCnpj()
+                    }
+                  }}
+                  className="pl-9 h-10 bg-white border-blue-300 font-mono text-sm focus:border-blue-500"
+                />
+              </div>
+              <Button
+                type="button"
+                onClick={handleEditFetchCnpj}
+                disabled={isFetchingCnpj}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold h-10 px-4 shrink-0 shadow-sm"
+              >
+                {isFetchingCnpj ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <span>Consultando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Search className="w-4 h-4 mr-2" />
+                    <span>Buscar dados</span>
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          <form onSubmit={handleSaveAccountEdit} className="space-y-4 pt-1">
+            {/* Bloco 1: Identificação */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                <Building className="w-3.5 h-3.5 text-slate-500" />
+                <span>Dados da Empresa</span>
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="edit-razao" className="text-xs font-semibold">
+                    Razão Social *
+                  </Label>
+                  <Input
+                    id="edit-razao"
+                    value={editRazaoSocial}
+                    onChange={(e) => setEditRazaoSocial(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="edit-fantasia" className="text-xs font-semibold">
+                    Nome Fantasia
+                  </Label>
+                  <Input
+                    id="edit-fantasia"
+                    value={editNomeFantasia}
+                    onChange={(e) => setEditNomeFantasia(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="edit-seg" className="text-xs font-semibold">
+                    Segmento de Mercado *
+                  </Label>
+                  <Input
+                    id="edit-seg"
+                    value={editSegmento}
+                    onChange={(e) => setEditSegmento(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="edit-porte" className="text-xs font-semibold">
+                    Porte Estimado
+                  </Label>
+                  <Select value={editPorte} onValueChange={(val: any) => setEditPorte(val)}>
+                    <SelectTrigger id="edit-porte" className="text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1-10">1 a 10 pessoas</SelectItem>
+                      <SelectItem value="11-50">11 a 50 pessoas</SelectItem>
+                      <SelectItem value="51-200">51 a 200 pessoas</SelectItem>
+                      <SelectItem value="201-500">201 a 500 pessoas</SelectItem>
+                      <SelectItem value="500+">500+ pessoas</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="edit-situacao" className="text-xs font-semibold">
+                    Situação Cadastral
+                  </Label>
+                  <Input
+                    id="edit-situacao"
+                    value={editSituacaoCadastral}
+                    onChange={(e) => setEditSituacaoCadastral(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {editCnaePrincipal && (
+                <div className="space-y-1">
+                  <Label htmlFor="edit-cnae-desc" className="text-xs font-semibold">
+                    CNAE Principal Completo (Receita Federal)
+                  </Label>
+                  <Input
+                    id="edit-cnae-desc"
+                    value={editCnaePrincipal}
+                    onChange={(e) => setEditCnaePrincipal(e.target.value)}
+                    className="text-xs bg-slate-50"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Bloco 2: Endereço Detalhado */}
+            <div className="space-y-3 pt-2 border-t border-slate-100">
+              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-slate-500" />
+                <span>Endereço & Localização</span>
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2 space-y-1">
+                  <Label htmlFor="edit-logradouro" className="text-xs font-semibold">
+                    Logradouro
+                  </Label>
+                  <Input
+                    id="edit-logradouro"
+                    value={editLogradouro}
+                    onChange={(e) => setEditLogradouro(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="edit-num" className="text-xs font-semibold">
+                    Número
+                  </Label>
+                  <Input
+                    id="edit-num"
+                    value={editNumero}
+                    onChange={(e) => setEditNumero(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="edit-comp" className="text-xs font-semibold">
+                    Complemento
+                  </Label>
+                  <Input
+                    id="edit-comp"
+                    value={editComplemento}
+                    onChange={(e) => setEditComplemento(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="edit-bairro" className="text-xs font-semibold">
+                    Bairro
+                  </Label>
+                  <Input
+                    id="edit-bairro"
+                    value={editBairro}
+                    onChange={(e) => setEditBairro(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="edit-cidade" className="text-xs font-semibold">
+                    Cidade *
+                  </Label>
+                  <Input
+                    id="edit-cidade"
+                    value={editCidade}
+                    onChange={(e) => {
+                      setEditCidade(e.target.value)
+                      if (!editLocalizacao || editLocalizacao === `${editCidade}, ${editEstado}`) {
+                        setEditLocalizacao(
+                          editEstado ? `${e.target.value}, ${editEstado}` : e.target.value,
+                        )
+                      }
+                    }}
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="edit-estado" className="text-xs font-semibold">
+                      UF *
+                    </Label>
+                    <Input
+                      id="edit-estado"
+                      maxLength={2}
+                      value={editEstado}
+                      onChange={(e) => {
+                        const val = e.target.value.toUpperCase()
+                        setEditEstado(val)
+                        if (
+                          !editLocalizacao ||
+                          editLocalizacao === `${editCidade}, ${editEstado}`
+                        ) {
+                          setEditLocalizacao(editCidade ? `${editCidade}, ${val}` : val)
+                        }
+                      }}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="edit-cep" className="text-xs font-semibold">
+                      CEP
+                    </Label>
+                    <Input
+                      id="edit-cep"
+                      value={editCep}
+                      onChange={(e) => setEditCep(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bloco 3: Contatos & Canais */}
+            <div className="space-y-3 pt-2 border-t border-slate-100">
+              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                <Phone className="w-3.5 h-3.5 text-slate-500" />
+                <span>Canais de Contato & Presença Digital</span>
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="edit-tel" className="text-xs font-semibold">
+                    Telefone Institucional
+                  </Label>
+                  <Input
+                    id="edit-tel"
+                    value={editTelefone}
+                    onChange={(e) => setEditTelefone(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="edit-email" className="text-xs font-semibold">
+                    E-mail Institucional
+                  </Label>
+                  <Input
+                    id="edit-email"
+                    type="email"
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="edit-site" className="text-xs font-semibold">
+                    Website Oficial
+                  </Label>
+                  <Input
+                    id="edit-site"
+                    value={editSite}
+                    onChange={(e) => setEditSite(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="edit-linkedin" className="text-xs font-semibold">
+                    LinkedIn Institucional
+                  </Label>
+                  <Input
+                    id="edit-linkedin"
+                    value={editLinkedin}
+                    onChange={(e) => setEditLinkedin(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Bloco 4: Observações */}
+            <div className="space-y-1 pt-2 border-t border-slate-100">
+              <Label htmlFor="edit-obs" className="text-xs font-semibold">
+                Observações / Contexto da Conta
+              </Label>
+              <Textarea
+                id="edit-obs"
+                value={editObservacoes}
+                onChange={(e) => setEditObservacoes(e.target.value)}
+                rows={2}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+              <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" className="bg-blue-600 text-white">
+                Salvar Alterações
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* DIALOG: NOVO CONTATO */}
       <Dialog open={contactDialogOpen} onOpenChange={setContactDialogOpen}>

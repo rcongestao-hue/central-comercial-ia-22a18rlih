@@ -18,7 +18,20 @@ migrate(
       app.save(adminUser)
     }
 
-    // 2. Check or create demo company
+    // 2. Check or create demo user for instant login
+    let demoUser
+    try {
+      demoUser = app.findAuthRecordByEmail('_pb_users_auth_', 'demo@aurorasolucoes.com')
+    } catch (_) {
+      demoUser = new Record(users)
+      demoUser.setEmail('demo@aurorasolucoes.com')
+      demoUser.setPassword('Skip@Pass123')
+      demoUser.setVerified(true)
+      demoUser.set('name', 'Executivo Demonstração')
+      app.save(demoUser)
+    }
+
+    // 3. Check or create demo company (Aurora Soluções Digitais)
     let comp
     try {
       comp = app.findFirstRecordByData('companies', 'slug', 'aurora-solucoes')
@@ -32,7 +45,7 @@ migrate(
       app.save(comp)
     }
 
-    // 3. Link user as proprietario in company_users
+    // 4. Link admin user as proprietario in company_users
     try {
       app.findFirstRecordByData('company_users', 'user', adminUser.id)
     } catch (_) {
@@ -44,7 +57,19 @@ migrate(
       app.save(compUser)
     }
 
-    // 4. Create onboarding config for company
+    // 5. Link demo user as administrador in company_users
+    try {
+      app.findFirstRecordByData('company_users', 'user', demoUser.id)
+    } catch (_) {
+      const compUser = new Record(companyUsers)
+      compUser.set('company', comp.id)
+      compUser.set('user', demoUser.id)
+      compUser.set('profile', 'administrador')
+      compUser.set('status', 'ativo')
+      app.save(compUser)
+    }
+
+    // 6. Create onboarding config for company
     try {
       app.findFirstRecordByData('onboarding_config', 'company', comp.id)
     } catch (_) {

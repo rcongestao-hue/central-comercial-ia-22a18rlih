@@ -279,12 +279,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginAsDemo = async () => {
     try {
-      await login('rcongestao@gmail.com', 'Skip@Pass')
+      // Tenta login com a conta de demonstração inicial
+      const res = await login('demo@aurorasolucoes.com', 'Skip@Pass123')
+      if (!res.success) {
+        // Fallback para admin inicial caso exista
+        await login('rcongestao@gmail.com', 'Skip@Pass')
+      }
     } catch (err) {
       console.error('Demo login error:', err)
       toast({
         title: 'Erro no login demo',
-        description: 'Não foi possível entrar com a conta padrão.',
+        description: 'Não foi possível entrar com a conta de demonstração.',
         variant: 'destructive',
       })
     }

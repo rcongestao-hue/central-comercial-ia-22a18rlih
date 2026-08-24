@@ -31,7 +31,8 @@ export const INITIAL_INTEGRATIONS: IntegrationCard[] = [
     ],
     exigeAprovacao: 'Sim, pela Meta (processo de verificação de empresa).',
     custos: 'Tarifação por conversa iniciada cobrada diretamente pela Meta.',
-    funcionaSemIntegracao: 'A IA redige o texto exato e o botão "Abrir no WhatsApp Web" transfere a mensagem sem necessidade de API.',
+    funcionaSemIntegracao:
+      'A IA redige o texto exato e o botão "Abrir no WhatsApp Web" transfere a mensagem sem necessidade de API.',
   },
   {
     id: 'gmail',
@@ -52,7 +53,8 @@ export const INITIAL_INTEGRATIONS: IntegrationCard[] = [
     ],
     exigeAprovacao: 'Verificação do app pelo Google para escopos sensíveis.',
     custos: 'Incluso no plano Google Workspace existente.',
-    funcionaSemIntegracao: 'A IA gera o assunto e o corpo formatado com botão "Copiar Texto" ou "mailto:" pronto.',
+    funcionaSemIntegracao:
+      'A IA gera o assunto e o corpo formatado com botão "Copiar Texto" ou "mailto:" pronto.',
   },
   {
     id: 'outlook',
@@ -71,7 +73,8 @@ export const INITIAL_INTEGRATIONS: IntegrationCard[] = [
     ],
     exigeAprovacao: 'Aprovação do Administrador de TI da organização.',
     custos: 'Incluso na licença Microsoft 365 da empresa.',
-    funcionaSemIntegracao: 'Cópia rápida de ata de reunião e pauta gerada por IA para colar no seu cliente de e-mail.',
+    funcionaSemIntegracao:
+      'Cópia rápida de ata de reunião e pauta gerada por IA para colar no seu cliente de e-mail.',
   },
   {
     id: 'linkedin',
@@ -90,7 +93,8 @@ export const INITIAL_INTEGRATIONS: IntegrationCard[] = [
     ],
     exigeAprovacao: 'Aprovação comercial e técnica restrita do LinkedIn Corporation.',
     custos: 'Licenças corporativas de alto volume.',
-    funcionaSemIntegracao: 'Busca direta por atalho com botão "Pesquisar Perfil no LinkedIn" e mensagens de conexão pré-redigidas.',
+    funcionaSemIntegracao:
+      'Busca direta por atalho com botão "Pesquisar Perfil no LinkedIn" e mensagens de conexão pré-redigidas.',
   },
 ]
 

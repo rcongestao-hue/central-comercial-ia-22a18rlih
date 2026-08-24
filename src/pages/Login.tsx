@@ -36,7 +36,7 @@ export default function Login() {
     setLoading(true)
 
     try {
-      const res = await login(email, password)
+      const res = await login(email, senha)
       setLoading(false)
       if (res.success) {
         navigate('/')

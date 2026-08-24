@@ -71,7 +71,9 @@ export default function ManagementDashboard() {
     const execPipeline = execOpps
       .filter((o) => o.etapa !== 'ganha' && o.etapa !== 'perdida')
       .reduce((acc, o) => acc + (o.valorEstimado || 0), 0)
-    const execMeetings = meetings.filter((m) => (m.participants || (m as any).participantes || []).some((p: string) => p.includes(exec.nome)))
+    const execMeetings = meetings.filter((m) =>
+      (m.participants || (m as any).participantes || []).some((p: string) => p.includes(exec.nome)),
+    )
 
     return {
       exec,

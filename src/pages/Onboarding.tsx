@@ -51,7 +51,7 @@ export default function Onboarding() {
     if (isAuthenticated) {
       // Allow onboarding to create new workspace, don't force redirect
     }
-  }, [isAuthenticated])
+  }, [])
 
   const handleNextStep = (e: React.FormEvent) => {
     e.preventDefault()
